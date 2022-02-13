@@ -1,0 +1,7 @@
+{
+    "recommendations": [
+        "ms-dotnettools.csharp",
+        "bpruitt-goddard.mermaid-markdown-syntax-highlighting",
+        "vstirbu.vscode-mermaid-preview"
+    ]
+}

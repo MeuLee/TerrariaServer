@@ -2,7 +2,6 @@
 using Microsoft.Extensions.Options;
 using System.Reflection;
 using System.Text;
-using TerrariaServer.Application.Extensions;
 
 namespace TerrariaServer.Application.Features;
 

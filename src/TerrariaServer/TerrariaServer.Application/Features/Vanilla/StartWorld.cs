@@ -1,8 +1,9 @@
 ﻿using Discord.Commands;
-using MediatR;
+using Discord.WebSocket;
 using Microsoft.Extensions.Options;
 using System.Diagnostics;
 using System.Text.RegularExpressions;
+using TerrariaServer.Application.Mediator;
 
 namespace TerrariaServer.Application.Features.Vanilla;
 
@@ -24,7 +25,7 @@ public class StartWorldModule : ModuleBase<SocketCommandContext>
 		{
 			var request = new StartWorldRequest(Context.User.Id, worldName, password);
 			await Context.Channel.SendMessageAsync($"Starting world {worldName}.");
-			await _mediator.Send(request);
+			await _mediator.SendAsync(request, Context.Channel);
 			await Context.Channel.SendMessageAsync($"World {worldName} is up and running.");
 		}
 		catch (InvalidPasswordException)
@@ -63,7 +64,7 @@ public class StartWorldModule : ModuleBase<SocketCommandContext>
 	}
 }
 
-internal record StartWorldRequest(ulong HostUserId, string WorldName, string Password) : IRequest<Unit>;
+internal record StartWorldRequest(ulong HostUserId, string WorldName, string Password) : IRequest;
 internal record WorldStartInfo(ulong User, string WorldName, string Password, Process Process);
 internal class World
 {
@@ -75,7 +76,7 @@ internal static class Constants
 	internal const int WorldStartTimeoutMilliseconds = 60 * 1000;
 }
 
-internal class StartWorldHandler : IRequestHandler<StartWorldRequest, Unit>
+internal class StartWorldHandler : IAsyncRequestHandler<StartWorldRequest>
 {
 	private const string PasswordRegex = "^[\\d\\w]+$";
 
@@ -90,7 +91,7 @@ internal class StartWorldHandler : IRequestHandler<StartWorldRequest, Unit>
 		_vanillaConfig = vanillaConfig.Value;
 	}
 
-	public async Task<Unit> Handle(StartWorldRequest request, CancellationToken cancellationToken)
+	public async Task HandleAsync(StartWorldRequest request, ISocketMessageChannel channel, CancellationToken cancellationToken)
 	{
 		if (_world.WorldStartInfo is not null)
 			throw new WorldIsAlreadyStartedException { WorldName = _world.WorldStartInfo.WorldName, Password = _world.WorldStartInfo.Password };
@@ -102,7 +103,6 @@ internal class StartWorldHandler : IRequestHandler<StartWorldRequest, Unit>
 		var arguments = $@"-pass {request.Password} -world ""{worldFilePath}"" -port {_vanillaConfig.Port}";
 		var process = await StartProcessAsync(_vanillaConfig.TerrariaServerPath, arguments);
 		_world.WorldStartInfo = new WorldStartInfo(request.HostUserId, request.WorldName, request.Password, process);
-		return Unit.Value;
 	}
 
 	private async Task<Process> StartProcessAsync(string fileName, string arguments)

@@ -1,8 +1,8 @@
 ﻿using Discord.Commands;
 using Discord.WebSocket;
+using MediatR;
 using Microsoft.Extensions.Options;
 using System.Diagnostics;
-using TerrariaServer.Application.Mediator;
 
 namespace TerrariaServer.Application.Features.Vanilla;
 
@@ -21,7 +21,7 @@ public class StopWorldModule : ModuleBase<SocketCommandContext>
 		try
 		{
 			var stopWorldRequest = new StopWorldRequest(Context.User.Id);
-			var worldName = await _mediator.SendAsync(stopWorldRequest, Context.Channel);
+			var worldName = await _mediator.Send(stopWorldRequest);
 			await Context.Channel.SendMessageAsync($"Stopping world {worldName}.");
 		}
 		catch (WorldIsNotStartedException)
@@ -41,7 +41,7 @@ public class StopWorldModule : ModuleBase<SocketCommandContext>
 
 internal record StopWorldRequest(ulong HostUserId) : IRequest<string>;
 
-internal class StopWorldHandler : IAsyncRequestHandler<StopWorldRequest, string>
+internal class StopWorldHandler : IRequestHandler<StopWorldRequest, string>
 {
 	private readonly DiscordConfiguration _discordConfig;
 	private readonly World _world;
@@ -52,7 +52,7 @@ internal class StopWorldHandler : IAsyncRequestHandler<StopWorldRequest, string>
 		_discordConfig = discordConfig.Value;
 	}
 
-	public async Task<string> HandleAsync(StopWorldRequest request, ISocketMessageChannel channel, CancellationToken cancellationToken)
+	public async Task<string> Handle(StopWorldRequest request, CancellationToken cancellationToken)
 	{
 		if (_world.WorldStartInfo is null)
 			throw new WorldIsNotStartedException();

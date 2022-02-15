@@ -1,9 +1,8 @@
 ﻿using Discord.Commands;
-using Discord.WebSocket;
+using MediatR;
 using Microsoft.Extensions.Options;
 using System.Diagnostics;
 using System.Text.RegularExpressions;
-using TerrariaServer.Application.Mediator;
 
 namespace TerrariaServer.Application.Features.Vanilla;
 
@@ -25,7 +24,7 @@ public class StartWorldModule : ModuleBase<SocketCommandContext>
 		{
 			var request = new StartWorldRequest(Context.User.Id, worldName, password);
 			await Context.Channel.SendMessageAsync($"Starting world {worldName}.");
-			await _mediator.SendAsync(request, Context.Channel);
+			await _mediator.Send(request);
 			await Context.Channel.SendMessageAsync($"World {worldName} is up and running.");
 		}
 		catch (InvalidPasswordException)
@@ -76,7 +75,7 @@ internal static class Constants
 	internal const int WorldStartTimeoutMilliseconds = 60 * 1000;
 }
 
-internal class StartWorldHandler : IAsyncRequestHandler<StartWorldRequest>
+internal class StartWorldHandler : IRequestHandler<StartWorldRequest>
 {
 	private const string PasswordRegex = "^[\\d\\w]+$";
 
@@ -91,7 +90,7 @@ internal class StartWorldHandler : IAsyncRequestHandler<StartWorldRequest>
 		_vanillaConfig = vanillaConfig.Value;
 	}
 
-	public async Task HandleAsync(StartWorldRequest request, ISocketMessageChannel channel, CancellationToken cancellationToken)
+	public async Task<Unit> Handle(StartWorldRequest request, CancellationToken cancellationToken)
 	{
 		if (_world.WorldStartInfo is not null)
 			throw new WorldIsAlreadyStartedException { WorldName = _world.WorldStartInfo.WorldName, Password = _world.WorldStartInfo.Password };
@@ -103,6 +102,7 @@ internal class StartWorldHandler : IAsyncRequestHandler<StartWorldRequest>
 		var arguments = $@"-pass {request.Password} -world ""{worldFilePath}"" -port {_vanillaConfig.Port}";
 		var process = await StartProcessAsync(_vanillaConfig.TerrariaServerPath, arguments);
 		_world.WorldStartInfo = new WorldStartInfo(request.HostUserId, request.WorldName, request.Password, process);
+		return Unit.Value;
 	}
 
 	private async Task<Process> StartProcessAsync(string fileName, string arguments)

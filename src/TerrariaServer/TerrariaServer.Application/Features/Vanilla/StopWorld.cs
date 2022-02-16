@@ -10,37 +10,19 @@ public class StopWorldModule : ModuleBase<SocketCommandContext>
 	private readonly IMediator _mediator;
 
 	internal StopWorldModule(IMediator mediator)
-	{
-		_mediator = mediator;
-	}
+		=> _mediator = mediator;
 
 	[Command("stop")]
 	internal async Task StopWorldAsync()
 	{
-		try
-		{
-			var stopWorldRequest = new StopWorldRequest(Context.User.Id);
-			var worldName = await _mediator.Send(stopWorldRequest);
-			await Context.Channel.SendMessageAsync($"Stopping world {worldName}.");
-		}
-		catch (WorldIsNotStartedException)
-		{
-			await Context.Channel.SendMessageAsync("The world is not started.");
-		}
-		catch (DidNotStartWorldException)
-		{
-			await Context.Channel.SendMessageAsync("The world can only be stopped by the person who started it, or by an admin.");
-		}
-		catch (Exception ex)
-		{
-			await Context.Channel.SendMessageAsync($"Encountered unknown error while trying to stop the world.\nError message: {ex.Message}");
-		}
+		var stopWorldRequest = new StopWorldRequest(Context.User.Id, Context.Message.Id);
+		await _mediator.Send(stopWorldRequest);
 	}
 }
 
-internal record StopWorldRequest(ulong HostUserId) : IRequest<string>;
+internal record StopWorldRequest(ulong HostUserId, ulong MessageId) : IRequest;
 
-internal class StopWorldHandler : IRequestHandler<StopWorldRequest, string>
+internal class StopWorldHandler : IRequestHandler<StopWorldRequest>
 {
 	private readonly DiscordConfiguration _discordConfig;
 	private readonly World _world;
@@ -53,16 +35,25 @@ internal class StopWorldHandler : IRequestHandler<StopWorldRequest, string>
 		_discordConfig = discordConfig.Value;
 	}
 
-	public async Task<string> Handle(StopWorldRequest request, CancellationToken cancellationToken)
+	public async Task<Unit> Handle(StopWorldRequest request, CancellationToken cancellationToken)
 	{
+		var commandContext = _commandContextProvider.ProvideContext(request.MessageId);
 		if (_world.WorldStartInfo is null)
-			throw new WorldIsNotStartedException();
+		{
+			await commandContext.Channel.SendMessageAsync("The world is not started.");
+			return Unit.Value;
+		}
 		if (_world.WorldStartInfo.User != request.HostUserId && request.HostUserId != _discordConfig.AdminUser)
-			throw new DidNotStartWorldException();
+		{
+			await commandContext.Channel.SendMessageAsync("The world can only be stopped by the person who started it, or by an admin.");
+			return Unit.Value;
+		}
+		await commandContext.Channel.SendMessageAsync($"Stopping world {_world.WorldStartInfo.WorldName}.");
 		await SendCommandToProcessAsync(_world.WorldStartInfo.Process, "exit");
 		var worldName = _world.WorldStartInfo.WorldName;
 		_world.WorldStartInfo = null;
-		return worldName;
+		await commandContext.Channel.SendMessageAsync($"Stopped world {worldName} successfully.");
+		return Unit.Value;
 	}
 
 	private static async Task SendCommandToProcessAsync(Process process, string command)
@@ -72,9 +63,6 @@ internal class StopWorldHandler : IRequestHandler<StopWorldRequest, string>
 		await process.StandardInput.WriteLineAsync(command);
 		var exited = process.WaitForExit(1000 * 15);
 		if (!exited)
-			throw new Exception("Process did not exit within the alloted timeout.");
+			throw new TimeoutException("Process did not exit within the alloted timeout.");
 	}
 }
-
-internal class DidNotStartWorldException : Exception { }
-internal class WorldIsNotStartedException : Exception { }

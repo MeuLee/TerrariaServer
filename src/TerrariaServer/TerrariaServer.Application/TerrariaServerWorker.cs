@@ -45,7 +45,7 @@ public partial class TerrariaServerWorker
 			return;
 		if (!socketUserMessage.HasStringPrefix(_discordConfig.Prefix, out var argumentsPosition))
 			return;
-		var commandResult = await _commandService.ExecuteAsync(context, argumentsPosition, _serviceProvider);
+		await _commandService.ExecuteAsync(context, argumentsPosition, _serviceProvider);
 	}
 
 	private async Task LogHandler(LogMessage log)

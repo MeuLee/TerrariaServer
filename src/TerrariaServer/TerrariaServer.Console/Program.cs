@@ -19,3 +19,7 @@ hostBuilder.ConfigureAppConfiguration(builder =>
 
 using var host = hostBuilder.Build();
 await host.RunAsync();
+
+// next: implement mediatr pipelinebehavior with try {} catch exception to handle any possible errors
+// remove anything to do with filesystem, OS commands etc for now, to allow development without env interference. Still have version control anyway so not a problem
+// tests? logging?

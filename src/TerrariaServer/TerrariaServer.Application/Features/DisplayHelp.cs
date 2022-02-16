@@ -11,9 +11,7 @@ public class DisplayHelpModule : ModuleBase<SocketCommandContext>
 	private readonly IMediator _mediator;
 
 	internal DisplayHelpModule(IMediator mediator)
-	{
-		_mediator = mediator;
-	}
+		=> _mediator = mediator;
 
 	[Command("help")]
 	internal async Task DisplayHelpAsync()

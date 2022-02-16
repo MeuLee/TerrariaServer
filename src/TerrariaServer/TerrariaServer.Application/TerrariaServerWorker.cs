@@ -12,17 +12,20 @@ public partial class TerrariaServerWorker
 	private readonly DiscordConfiguration _discordConfig;
 	private readonly CommandService _commandService;
 	private readonly IServiceProvider _serviceProvider;
+	private readonly ISocketCommandContextFactory _commandContextFactory;
 
 	public TerrariaServerWorker(
 		DiscordSocketClient client,
 		CommandService commandService,
 		IOptions<DiscordConfiguration> discordConfig,
-		IServiceProvider serviceProvider)
+		IServiceProvider serviceProvider,
+		ISocketCommandContextFactory commandContextFactory)
 	{
 		_client = client;
 		_commandService = commandService;
 		_discordConfig = discordConfig.Value;
 		_serviceProvider = serviceProvider;
+		_commandContextFactory = commandContextFactory;
 		RegisterEventHandlers();
 	}
 
@@ -37,7 +40,7 @@ public partial class TerrariaServerWorker
 	{
 		if (message is not SocketUserMessage socketUserMessage || message.Author.IsBot)
 			return;
-		var context = new SocketCommandContext(_client, socketUserMessage);
+		var context = _commandContextFactory.CreateContext(_client, socketUserMessage);
 		if (!_discordConfig.AllowedChannels.Contains(socketUserMessage.Channel.Id))
 			return;
 		if (!socketUserMessage.HasStringPrefix(_discordConfig.Prefix, out var argumentsPosition))

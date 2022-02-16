@@ -1,4 +1,5 @@
 ﻿using Discord.Commands;
+using MediatR;
 using Microsoft.Extensions.Options;
 using System.Reflection;
 using System.Text;
@@ -7,19 +8,41 @@ namespace TerrariaServer.Application.Features;
 
 public class DisplayHelpModule : ModuleBase<SocketCommandContext>
 {
-	private readonly DiscordConfiguration _discordConfig;
-	private readonly string _displayHelpMessage;
+	private readonly IMediator _mediator;
 
-	internal DisplayHelpModule(IOptions<DiscordConfiguration> discordConfig)
+	internal DisplayHelpModule(IMediator mediator)
 	{
-		_discordConfig = discordConfig.Value;
-		_displayHelpMessage = GetDisplayHelpMessage();
+		_mediator = mediator;
 	}
 
 	[Command("help")]
 	internal async Task DisplayHelpAsync()
 	{
-		await Context.Channel.SendMessageAsync(_displayHelpMessage);
+		var request = new DisplayHelpRequest(Context.Message.Id);
+		await _mediator.Send(request);
+	}	
+}
+
+internal record DisplayHelpRequest(ulong MessageId) : IRequest;
+
+internal class DisplayHelpHandler : IRequestHandler<DisplayHelpRequest>
+{
+	private readonly ISocketCommandContextProvider _commandContextProvider;
+	private readonly DiscordConfiguration _discordConfig;
+	private string? _displayHelpMessage;
+
+	public DisplayHelpHandler(ISocketCommandContextProvider commandContextProvider, IOptions<DiscordConfiguration> discordConfig)
+	{
+		_commandContextProvider = commandContextProvider;
+		_discordConfig = discordConfig.Value;
+	}
+
+	public async Task<Unit> Handle(DisplayHelpRequest request, CancellationToken cancellationToken)
+	{
+		var displayHelpMessage = _displayHelpMessage ??= GetDisplayHelpMessage();
+		var commandContext = _commandContextProvider.ProvideContext(request.MessageId);
+		await commandContext.Channel.SendMessageAsync(displayHelpMessage);
+		return Unit.Value;
 	}
 
 	private string GetDisplayHelpMessage()

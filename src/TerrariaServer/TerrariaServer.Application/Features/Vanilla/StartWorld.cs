@@ -81,12 +81,13 @@ internal class StartWorldHandler : IRequestHandler<StartWorldRequest>
 
 	private readonly VanillaConfiguration _vanillaConfig;
 	private readonly World _world;
-
+	private readonly ISocketCommandContextProvider _commandContextProvider;
 	private bool _worldStarted = false;
 
-	public StartWorldHandler(World world, IOptions<VanillaConfiguration> vanillaConfig)
+	public StartWorldHandler(World world, ISocketCommandContextProvider commandContextProvider, IOptions<VanillaConfiguration> vanillaConfig)
 	{
 		_world = world;
+		_commandContextProvider = commandContextProvider;
 		_vanillaConfig = vanillaConfig.Value;
 	}
 

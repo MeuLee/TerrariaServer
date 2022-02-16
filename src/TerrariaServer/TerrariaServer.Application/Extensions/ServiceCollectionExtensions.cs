@@ -17,7 +17,8 @@ public static class ServiceCollectionExtensions
 
 	public static IServiceCollection AddDiscord(this IServiceCollection services)
 		=> services.AddDiscordSocketClient()
-			.AddCommandService();
+			.AddCommandService()
+			.AddCommandContextWithCache();
 
 	private static IServiceCollection AddDiscordSocketClient(this IServiceCollection services)
 		=> services.AddSingleton(new DiscordSocketClient(new DiscordSocketConfig { MessageCacheSize = 50, GatewayIntents = GatewayIntents.Guilds | GatewayIntents.GuildMessages }));
@@ -29,4 +30,10 @@ public static class ServiceCollectionExtensions
 			commandService.AddModulesAsync(Assembly.GetExecutingAssembly(), sp).GetAwaiter().GetResult();
 			return commandService;
 		});
+
+	private static IServiceCollection AddCommandContextWithCache(this IServiceCollection services)
+		=> services.AddMemoryCache()
+			.AddSingleton<SocketCommandContextFactory>()
+			.AddSingleton<ISocketCommandContextFactory>(services => services.GetRequiredService<SocketCommandContextFactory>())
+			.AddSingleton<ISocketCommandContextProvider>(services => services.GetRequiredService<SocketCommandContextFactory>());
 }

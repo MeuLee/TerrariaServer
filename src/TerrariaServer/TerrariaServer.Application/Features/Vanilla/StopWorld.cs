@@ -1,5 +1,4 @@
 ﻿using Discord.Commands;
-using Discord.WebSocket;
 using MediatR;
 using Microsoft.Extensions.Options;
 using System.Diagnostics;
@@ -45,10 +44,12 @@ internal class StopWorldHandler : IRequestHandler<StopWorldRequest, string>
 {
 	private readonly DiscordConfiguration _discordConfig;
 	private readonly World _world;
+	private readonly ISocketCommandContextProvider _commandContextProvider;
 
-	public StopWorldHandler(World world, IOptions<DiscordConfiguration> discordConfig)
+	public StopWorldHandler(World world, ISocketCommandContextProvider commandContextProvider, IOptions<DiscordConfiguration> discordConfig)
 	{
 		_world = world;
+		_commandContextProvider = commandContextProvider;
 		_discordConfig = discordConfig.Value;
 	}
 

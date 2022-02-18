@@ -15,7 +15,7 @@ public static class ServiceCollectionExtensions
 	public static IServiceCollection AddApplication(this IServiceCollection services)
 		=> services.AddSingleton<World>()
 			.AddMediatR(Assembly.GetExecutingAssembly())
-			.AddMediatRExceptionHandlers()
+			.AddTransient(typeof(IPipelineBehavior<,>), typeof(PipelineExceptionHandler<,>))
 			.AddHostedService<TerrariaServerWorker>();
 
 	public static IServiceCollection AddDiscord(this IServiceCollection services)
@@ -39,10 +39,4 @@ public static class ServiceCollectionExtensions
 			.AddSingleton<SocketCommandContextFactory>()
 			.AddSingleton<ISocketCommandContextFactory>(services => services.GetRequiredService<SocketCommandContextFactory>())
 			.AddSingleton<ISocketCommandContextProvider>(services => services.GetRequiredService<SocketCommandContextFactory>());
-
-	private static IServiceCollection AddMediatRExceptionHandlers(this IServiceCollection services)
-	{
-		services.AddTransient(typeof(IPipelineBehavior<,>), typeof(PipelineExceptionHandler<,>));
-		return services;
-	}
 }

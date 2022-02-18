@@ -3,6 +3,7 @@ using MediatR;
 using Microsoft.Extensions.Options;
 using System.Reflection;
 using System.Text;
+using TerrariaServer.Application.Shared;
 
 namespace TerrariaServer.Application.Features;
 
@@ -21,7 +22,7 @@ public class DisplayHelpModule : ModuleBase<SocketCommandContext>
 	}	
 }
 
-internal record DisplayHelpRequest(ulong MessageId) : IRequest;
+internal record DisplayHelpRequest(ulong MessageId) : IRequestWithMessageId;
 
 internal class DisplayHelpHandler : IRequestHandler<DisplayHelpRequest>
 {

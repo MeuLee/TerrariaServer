@@ -3,6 +3,7 @@ using MediatR;
 using Microsoft.Extensions.Options;
 using System.Diagnostics;
 using System.Text.RegularExpressions;
+using TerrariaServer.Application.Shared;
 
 namespace TerrariaServer.Application.Features.Vanilla;
 
@@ -21,7 +22,7 @@ public class StartWorldModule : ModuleBase<SocketCommandContext>
 	}
 }
 
-internal record StartWorldRequest(ulong HostUserId, string WorldName, string Password, ulong MessageId) : IRequest;
+internal record StartWorldRequest(ulong HostUserId, string WorldName, string Password, ulong MessageId) : IRequestWithMessageId;
 
 // todo should be moved elsewhere
 internal record WorldStartInfo(ulong User, string WorldName, string Password, Process Process);
@@ -50,7 +51,6 @@ internal class StartWorldHandler : IRequestHandler<StartWorldRequest>
 	public async Task<Unit> Handle(StartWorldRequest request, CancellationToken cancellationToken)
 	{
 		var commandContext = _commandContextProvider.ProvideContext(request.MessageId);
-		await commandContext.Channel.SendMessageAsync($"Starting world {request.WorldName}.");
 		if (_world.WorldStartInfo is not null)
 		{
 			var joinMessage = _world.WorldStartInfo.WorldName == request.WorldName ? $" You can join with the password: {_world.WorldStartInfo.Password}" : string.Empty;
@@ -75,6 +75,7 @@ internal class StartWorldHandler : IRequestHandler<StartWorldRequest>
 		var arguments = $@"-pass {request.Password} -world ""{worldFilePath}"" -port {_vanillaConfig.Port}";
 		try
 		{
+			await commandContext.Channel.SendMessageAsync($"Starting world {request.WorldName}.");
 			var process = await StartProcessAsync(_vanillaConfig.TerrariaServerPath, arguments);
 			_world.WorldStartInfo = new WorldStartInfo(request.HostUserId, request.WorldName, request.Password, process);
 			await commandContext.Channel.SendMessageAsync($"World {request.WorldName} is up and running.");

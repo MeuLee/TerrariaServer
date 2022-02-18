@@ -2,7 +2,7 @@
 using Discord.WebSocket;
 using Microsoft.Extensions.Caching.Memory;
 
-namespace TerrariaServer.Application;
+namespace TerrariaServer.Application.Shared;
 
 public interface ISocketCommandContextFactory
 {

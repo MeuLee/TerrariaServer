@@ -3,6 +3,7 @@ using Discord.Commands;
 using Discord.WebSocket;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
+using TerrariaServer.Application.Shared;
 
 namespace TerrariaServer.Application;
 

@@ -2,6 +2,7 @@
 using MediatR;
 using Microsoft.Extensions.Options;
 using System.Diagnostics;
+using TerrariaServer.Application.Shared;
 
 namespace TerrariaServer.Application.Features.Vanilla;
 
@@ -20,7 +21,7 @@ public class StopWorldModule : ModuleBase<SocketCommandContext>
 	}
 }
 
-internal record StopWorldRequest(ulong HostUserId, ulong MessageId) : IRequest;
+internal record StopWorldRequest(ulong HostUserId, ulong MessageId) : IRequestWithMessageId;
 
 internal class StopWorldHandler : IRequestHandler<StopWorldRequest>
 {

@@ -2,9 +2,11 @@
 using Discord.Commands;
 using Discord.WebSocket;
 using MediatR;
+using MediatR.Pipeline;
 using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
 using TerrariaServer.Application.Features.Vanilla;
+using TerrariaServer.Application.Shared;
 
 namespace TerrariaServer.Application.Extensions;
 
@@ -13,6 +15,7 @@ public static class ServiceCollectionExtensions
 	public static IServiceCollection AddApplication(this IServiceCollection services)
 		=> services.AddSingleton<World>()
 			.AddMediatR(Assembly.GetExecutingAssembly())
+			.AddMediatRExceptionHandlers(Assembly.GetExecutingAssembly())
 			.AddHostedService<TerrariaServerWorker>();
 
 	public static IServiceCollection AddDiscord(this IServiceCollection services)
@@ -36,4 +39,10 @@ public static class ServiceCollectionExtensions
 			.AddSingleton<SocketCommandContextFactory>()
 			.AddSingleton<ISocketCommandContextFactory>(services => services.GetRequiredService<SocketCommandContextFactory>())
 			.AddSingleton<ISocketCommandContextProvider>(services => services.GetRequiredService<SocketCommandContextFactory>());
+
+	private static IServiceCollection AddMediatRExceptionHandlers(this IServiceCollection services, Assembly assembly)
+	{
+		services.AddTransient(typeof(IPipelineBehavior<,>), typeof(PipelineExceptionHandler<,>));
+		return services;
+	}
 }

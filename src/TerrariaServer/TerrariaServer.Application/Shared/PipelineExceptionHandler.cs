@@ -2,11 +2,11 @@
 
 namespace TerrariaServer.Application.Shared;
 
-internal class PipelineExceptionHandler<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
-    where TRequest : IRequest<TResponse>
+internal class PipelineExceptionHandler<TRequest, TResponse> : IPipelineBehavior<TRequest, Unit>
+    where TRequest : IRequestWithMessageId
 {
-    public async Task<TResponse> Handle(TRequest request, CancellationToken cancellationToken, RequestHandlerDelegate<TResponse> next)
-    {
+	public async Task<Unit> Handle(TRequest request, CancellationToken cancellationToken, RequestHandlerDelegate<Unit> next)
+	{
         var response = await next();
         return response;
     }

@@ -2,18 +2,18 @@
 using Discord.Commands;
 using Discord.WebSocket;
 using MediatR;
-using MediatR.Pipeline;
 using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
-using TerrariaServer.Application.Features.Vanilla;
 using TerrariaServer.Application.Shared;
+using TerrariaServer.Application.Shared.Services;
+using TerrariaServer.Features.Terraria.Shared;
 
 namespace TerrariaServer.Application.Extensions;
 
 public static class ServiceCollectionExtensions
 {
 	public static IServiceCollection AddApplication(this IServiceCollection services)
-		=> services.AddSingleton<World>()
+		=> services.AddSingleton<WorldService>()
 			.AddMediatR(Assembly.GetExecutingAssembly())
 			.AddTransient(typeof(IPipelineBehavior<,>), typeof(PipelineExceptionHandler<,>))
 			.AddHostedService<TerrariaServerWorker>();
@@ -36,7 +36,7 @@ public static class ServiceCollectionExtensions
 
 	private static IServiceCollection AddCommandContextWithCache(this IServiceCollection services)
 		=> services.AddMemoryCache()
-			.AddSingleton<SocketCommandContextFactory>()
-			.AddSingleton<ISocketCommandContextFactory>(services => services.GetRequiredService<SocketCommandContextFactory>())
-			.AddSingleton<ISocketCommandContextProvider>(services => services.GetRequiredService<SocketCommandContextFactory>());
+			.AddSingleton<CommandContextFactory>()
+			.AddSingleton<CommandContextFactory>(services => services.GetRequiredService<CommandContextFactory>())
+			.AddSingleton<ICommandContextProvider>(services => services.GetRequiredService<CommandContextFactory>());
 }

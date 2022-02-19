@@ -4,8 +4,9 @@ using Microsoft.Extensions.Options;
 using System.Reflection;
 using System.Text;
 using TerrariaServer.Application.Shared;
+using TerrariaServer.Application.Shared.Services;
 
-namespace TerrariaServer.Application.Features;
+namespace TerrariaServer.Application.Features.Discord;
 
 public class DisplayHelpModule : ModuleBase<SocketCommandContext>
 {
@@ -26,11 +27,11 @@ internal record DisplayHelpRequest(ulong MessageId) : IRequestWithMessageId;
 
 internal class DisplayHelpHandler : IRequestHandler<DisplayHelpRequest>
 {
-	private readonly ISocketCommandContextProvider _commandContextProvider;
+	private readonly ICommandContextProvider _commandContextProvider;
 	private readonly DiscordConfiguration _discordConfig;
 	private string? _displayHelpMessage;
 
-	public DisplayHelpHandler(ISocketCommandContextProvider commandContextProvider, IOptions<DiscordConfiguration> discordConfig)
+	public DisplayHelpHandler(ICommandContextProvider commandContextProvider, IOptions<DiscordConfiguration> discordConfig)
 	{
 		_commandContextProvider = commandContextProvider;
 		_discordConfig = discordConfig.Value;

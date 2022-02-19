@@ -1,13 +1,14 @@
 ﻿using MediatR;
+using TerrariaServer.Application.Shared.Services;
 
 namespace TerrariaServer.Application.Shared;
 
 internal class PipelineExceptionHandler<TRequest, TResponse> : IPipelineBehavior<TRequest, Unit>
     where TRequest : IRequestWithMessageId
 {
-    private readonly ISocketCommandContextProvider _commandContextProvider;
+    private readonly ICommandContextProvider _commandContextProvider;
 
-	public PipelineExceptionHandler(ISocketCommandContextProvider commandContextProvider)
+	public PipelineExceptionHandler(ICommandContextProvider commandContextProvider)
 	{
 		_commandContextProvider = commandContextProvider;
 	}

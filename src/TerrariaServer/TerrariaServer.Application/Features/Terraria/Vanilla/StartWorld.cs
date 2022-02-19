@@ -1,11 +1,12 @@
 ﻿using Discord.Commands;
 using MediatR;
 using Microsoft.Extensions.Options;
-using System.Diagnostics;
 using System.Text.RegularExpressions;
 using TerrariaServer.Application.Shared;
+using TerrariaServer.Application.Shared.Services;
+using TerrariaServer.Features.Terraria.Shared;
 
-namespace TerrariaServer.Application.Features.Vanilla;
+namespace TerrariaServer.Application.Features.Terraria.Vanilla;
 
 public class StartWorldModule : ModuleBase<SocketCommandContext>
 {
@@ -24,26 +25,18 @@ public class StartWorldModule : ModuleBase<SocketCommandContext>
 
 internal record StartWorldRequest(ulong HostUserId, string WorldName, string Password, ulong MessageId) : IRequestWithMessageId;
 
-// todo should be moved elsewhere
-internal record WorldStartInfo(ulong User, string WorldName, string Password, Process Process);
-internal class World
-{
-	internal WorldStartInfo? WorldStartInfo { get; set; }
-}
-
 internal class StartWorldHandler : IRequestHandler<StartWorldRequest>
 {
 	private const string PasswordRegex = "^[\\d\\w]+$";
 
 	private readonly VanillaConfiguration _vanillaConfig;
-	private readonly World _world;
-	private readonly ISocketCommandContextProvider _commandContextProvider;
+	private readonly WorldService _worldService;
+	private readonly ICommandContextProvider _commandContextProvider;
 	private readonly TimeSpan _worldStartTimeout = TimeSpan.FromMinutes(1);
-	private bool _worldStarted = false;
 
-	public StartWorldHandler(World world, ISocketCommandContextProvider commandContextProvider, IOptions<VanillaConfiguration> vanillaConfig)
+	public StartWorldHandler(WorldService world, ICommandContextProvider commandContextProvider, IOptions<VanillaConfiguration> vanillaConfig)
 	{
-		_world = world;
+		_worldService = world;
 		_commandContextProvider = commandContextProvider;
 		_vanillaConfig = vanillaConfig.Value;
 	}
@@ -51,10 +44,11 @@ internal class StartWorldHandler : IRequestHandler<StartWorldRequest>
 	public async Task<Unit> Handle(StartWorldRequest request, CancellationToken cancellationToken)
 	{
 		var commandContext = _commandContextProvider.ProvideContext(request.MessageId);
-		if (_world.WorldStartInfo is not null)
+		if (_worldService.IsWorldStarted(request.WorldName))
 		{
-			var joinMessage = _world.WorldStartInfo.WorldName == request.WorldName ? $" You can join with the password: {_world.WorldStartInfo.Password}" : string.Empty;
-			await commandContext.Channel.SendMessageAsync($"World {_world.WorldStartInfo.WorldName} is already started.{joinMessage}");
+			var world = _worldService.GetWorld(request.WorldName);
+			var joinMessage = world.WorldName == request.WorldName ? $" You can join with the password: {world.Password}" : string.Empty;
+			await commandContext.Channel.SendMessageAsync($"World {world.WorldName} is already started.{joinMessage}");
 			return Unit.Value;
 		}
 		if (!Regex.IsMatch(request.Password, PasswordRegex))
@@ -76,8 +70,8 @@ internal class StartWorldHandler : IRequestHandler<StartWorldRequest>
 		try
 		{
 			await commandContext.Channel.SendMessageAsync($"Starting world {request.WorldName}.");
-			var process = await StartProcessAsync(_vanillaConfig.TerrariaServerPath, arguments);
-			_world.WorldStartInfo = new WorldStartInfo(request.HostUserId, request.WorldName, request.Password, process);
+			await Task.Delay(5 * 1000, cancellationToken); // start the world
+			_worldService.MarkWorldAsStarted(new WorldStartInfo(request.HostUserId, request.WorldName, request.Password));
 			await commandContext.Channel.SendMessageAsync($"World {request.WorldName} is up and running.");
 		}
 		catch (TimeoutException)
@@ -86,39 +80,6 @@ internal class StartWorldHandler : IRequestHandler<StartWorldRequest>
 		}
 
 		return Unit.Value;
-	}
-
-	private async Task<Process> StartProcessAsync(string fileName, string arguments)
-	{
-		var processStartInfo = new ProcessStartInfo
-		{
-			FileName = "/bin/bash",
-			Arguments = $"{fileName} {arguments}",
-			RedirectStandardInput = true,
-			RedirectStandardOutput = true,
-			UseShellExecute = false
-		};
-		var process = new Process { StartInfo = processStartInfo, EnableRaisingEvents = true };
-		process.OutputDataReceived += OutputDataReceived;
-		process.Start();
-		process.BeginOutputReadLine();
-		await WaitForWorldStartedAsync().WaitAsync(_worldStartTimeout);
-		return process;
-
-		void OutputDataReceived(object sender, DataReceivedEventArgs e)
-		{
-			if (e.Data != $"Listening on port {_vanillaConfig.Port}")
-				return;
-			_worldStarted = true;
-		}
-
-		async Task WaitForWorldStartedAsync()
-		{
-			while (!_worldStarted)
-			{
-				await Task.Delay(1000);
-			}
-		}
 	}
 
 	private List<string> ListWorlds()

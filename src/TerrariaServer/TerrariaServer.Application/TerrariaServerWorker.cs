@@ -3,7 +3,7 @@ using Discord.Commands;
 using Discord.WebSocket;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
-using TerrariaServer.Application.Shared;
+using TerrariaServer.Application.Shared.Services;
 
 namespace TerrariaServer.Application;
 
@@ -13,14 +13,14 @@ public partial class TerrariaServerWorker
 	private readonly DiscordConfiguration _discordConfig;
 	private readonly CommandService _commandService;
 	private readonly IServiceProvider _serviceProvider;
-	private readonly ISocketCommandContextFactory _commandContextFactory;
+	private readonly ICommandContextFactory _commandContextFactory;
 
 	public TerrariaServerWorker(
 		DiscordSocketClient client,
 		CommandService commandService,
 		IOptions<DiscordConfiguration> discordConfig,
 		IServiceProvider serviceProvider,
-		ISocketCommandContextFactory commandContextFactory)
+		ICommandContextFactory commandContextFactory)
 	{
 		_client = client;
 		_commandService = commandService;

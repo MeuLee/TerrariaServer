@@ -9,6 +9,7 @@ namespace TerrariaServer.Application.Shared
 
 	internal static class RequestWithMessageIdExtensions
 	{
-		internal static string GetCommandName(this IRequestWithMessageId request) => request.GetType().Name.Replace("Request", "");
+		internal static string GetCommandName(this IRequestWithMessageId request)
+			=> request.GetType().Name.Replace("Request", string.Empty);
 	}
 }

@@ -1,9 +1,8 @@
 ﻿using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using TerrariaServer.Application;
 using TerrariaServer.Application.Extensions;
 using TerrariaServer.Console;
-using TerrariaServer.Console.Extensions;
 
 var hostBuilder = Host.CreateDefaultBuilder(args);
 
@@ -11,7 +10,6 @@ hostBuilder.ConfigureServices((ctx, services) =>
 {
 	services
 		.AddConfiguration(ctx.Configuration)
-		.AddHostedService<TerrariaServerWorker>()
 		.AddDiscord()
 		.AddApplication();
 });

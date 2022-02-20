@@ -17,7 +17,6 @@ enum SystemdType
 
 internal record CreateSystemdResponse;
 
-// should be called out of process with a message queue like rabbitmq to keep slices independent
 internal class CreateSystemdHandler : IRequestHandler<CreateSystemdRequest, CreateSystemdResponse>
 {
 	public async Task<CreateSystemdResponse> Handle(CreateSystemdRequest request, CancellationToken cancellationToken)

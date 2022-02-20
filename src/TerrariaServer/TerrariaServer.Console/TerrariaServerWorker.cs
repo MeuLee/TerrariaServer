@@ -1,8 +1,10 @@
 ﻿using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
+using System.Reflection;
 using TerrariaServer.Application;
 
 namespace TerrariaServer.Console;
@@ -89,4 +91,23 @@ internal static class UserMessageExtensions
 		index = 0;
 		return message.HasStringPrefix(prefix, ref index);
 	}
+}
+
+internal static class ServiceCollectionExtensions
+{
+	internal static IServiceCollection AddDiscord(this IServiceCollection services)
+		=> services.AddHostedService<TerrariaServerWorker>()
+			.AddDiscordSocketClient()
+			.AddCommandService();
+
+	private static IServiceCollection AddDiscordSocketClient(this IServiceCollection services)
+		=> services.AddSingleton(new DiscordSocketClient(new DiscordSocketConfig { MessageCacheSize = 50, GatewayIntents = GatewayIntents.Guilds | GatewayIntents.GuildMessages }));
+
+	private static IServiceCollection AddCommandService(this IServiceCollection services)
+		=> services.AddSingleton(sp =>
+		{
+			var commandService = new CommandService(new CommandServiceConfig { CaseSensitiveCommands = true, DefaultRunMode = RunMode.Async });
+			commandService.AddModulesAsync(Assembly.GetExecutingAssembly(), sp).GetAwaiter().GetResult();
+			return commandService;
+		});
 }

@@ -1,10 +1,12 @@
-﻿namespace TerrariaServer.Features.Terraria.Shared;
+﻿using TerrariaServer.Application.Features.Terraria.Shared;
+
+namespace TerrariaServer.Features.Terraria.Shared;
 
 internal record WorldStartInfo(ulong User, string WorldName, string Password);
 internal class WorldService
 {
 	// concurrent?
-	private Dictionary<string, WorldStartInfo> _worlds { get; } = new();
+	private readonly Dictionary<string, WorldStartInfo> _worlds = new();
 	internal bool IsWorldStarted(string worldName) => _worlds.ContainsKey(worldName);
 	internal void MarkWorldAsStarted(WorldStartInfo worldStartInfo)
 	{
@@ -22,6 +24,3 @@ internal class WorldService
 		return _worlds[worldName];
 	}
 }
-
-internal class WorldIsAlreadyStartedException : Exception { }
-internal class WorldIsNotStartedException : Exception { }

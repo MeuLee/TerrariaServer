@@ -3,9 +3,9 @@ using Discord.Commands;
 using Discord.WebSocket;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
-using TerrariaServer.Application.Shared.Services;
+using TerrariaServer.Application;
 
-namespace TerrariaServer.Application;
+namespace TerrariaServer.Console;
 
 public partial class TerrariaServerWorker
 {
@@ -13,45 +13,35 @@ public partial class TerrariaServerWorker
 	private readonly DiscordConfiguration _discordConfig;
 	private readonly CommandService _commandService;
 	private readonly IServiceProvider _serviceProvider;
-	private readonly ICommandContextFactory _commandContextFactory;
 
 	public TerrariaServerWorker(
 		DiscordSocketClient client,
 		CommandService commandService,
 		IOptions<DiscordConfiguration> discordConfig,
-		IServiceProvider serviceProvider,
-		ICommandContextFactory commandContextFactory)
+		IServiceProvider serviceProvider)
 	{
 		_client = client;
 		_commandService = commandService;
 		_discordConfig = discordConfig.Value;
 		_serviceProvider = serviceProvider;
-		_commandContextFactory = commandContextFactory;
 		RegisterEventHandlers();
 	}
 
 	private void RegisterEventHandlers()
 	{
 		_client.MessageReceived += MessageReceivedHandler;
-		_client.Log += LogHandler;
-		_commandService.Log += LogHandler;
 	}
 
 	private async Task MessageReceivedHandler(SocketMessage message)
 	{
 		if (message is not SocketUserMessage socketUserMessage || message.Author.IsBot)
 			return;
-		var context = _commandContextFactory.CreateContext(_client, socketUserMessage);
+		var context = new SocketCommandContext(_client, socketUserMessage);
 		if (!_discordConfig.AllowedChannels.Contains(socketUserMessage.Channel.Id))
 			return;
 		if (!socketUserMessage.HasStringPrefix(_discordConfig.Prefix, out var argumentsPosition))
 			return;
-		await _commandService.ExecuteAsync(context, argumentsPosition, _serviceProvider);
-	}
-
-	private async Task LogHandler(LogMessage log)
-	{
-		await Console.Out.WriteLineAsync(log.Message);
+		_ = await _commandService.ExecuteAsync(context, argumentsPosition, _serviceProvider);
 	}
 }
 

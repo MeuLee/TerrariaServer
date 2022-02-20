@@ -3,8 +3,6 @@ using MediatR;
 using Microsoft.Extensions.Options;
 using System.Reflection;
 using System.Text;
-using TerrariaServer.Application.Shared;
-using TerrariaServer.Application.Shared.Services;
 
 namespace TerrariaServer.Application.Features.Discord;
 
@@ -19,33 +17,31 @@ public class DisplayHelpModule : ModuleBase<SocketCommandContext>
 	internal async Task DisplayHelpAsync()
 	{
 		var request = new DisplayHelpRequest(Context.Message.Id);
-		await _mediator.Send(request);
+		var response = await _mediator.Send(request);
+		await ReplyAsync(response.HelpMessage);
 	}	
 }
 
-internal record DisplayHelpRequest(ulong MessageId) : IRequestWithMessageId;
+internal record DisplayHelpRequest(ulong MessageId) : IRequest<DisplayHelpResponse>;
+internal record DisplayHelpResponse(string HelpMessage);
 
-internal class DisplayHelpHandler : IRequestHandler<DisplayHelpRequest>
+internal class DisplayHelpHandler : IRequestHandler<DisplayHelpRequest, DisplayHelpResponse>
 {
-	private readonly ICommandContextProvider _commandContextProvider;
 	private readonly DiscordConfiguration _discordConfig;
-	private string? _displayHelpMessage;
+	private string? _helpMessage;
 
-	public DisplayHelpHandler(ICommandContextProvider commandContextProvider, IOptions<DiscordConfiguration> discordConfig)
+	public DisplayHelpHandler(IOptions<DiscordConfiguration> discordConfig)
 	{
-		_commandContextProvider = commandContextProvider;
 		_discordConfig = discordConfig.Value;
 	}
 
-	public async Task<Unit> Handle(DisplayHelpRequest request, CancellationToken cancellationToken)
+	public Task<DisplayHelpResponse> Handle(DisplayHelpRequest request, CancellationToken cancellationToken)
 	{
-		var displayHelpMessage = _displayHelpMessage ??= GetDisplayHelpMessage();
-		var commandContext = _commandContextProvider.ProvideContext(request.MessageId);
-		await commandContext.Channel.SendMessageAsync(displayHelpMessage);
-		return Unit.Value;
+		var helpMessage = _helpMessage ??= GenerateHelpMessage(_discordConfig.Prefix);
+		return Task.FromResult(new DisplayHelpResponse(helpMessage));
 	}
 
-	private string GetDisplayHelpMessage()
+	private static string GenerateHelpMessage(string commandPrefix)
 	{
 		var modules = Assembly
 			.GetExecutingAssembly()
@@ -63,7 +59,7 @@ internal class DisplayHelpHandler : IRequestHandler<DisplayHelpRequest>
 				parametersStringBuilder.Append($" <{parameter.Name}> ");
 			}
 
-			stringBuilder.AppendLine($"\tUsage: {_discordConfig.Prefix}{command}{parametersStringBuilder}");
+			stringBuilder.AppendLine($"\tUsage: {commandPrefix}{command}{parametersStringBuilder}");
 		}
 
 		return stringBuilder.ToString();

@@ -25,6 +25,7 @@ public static class ServiceCollectionExtensions
 		=> services.AddSingleton(sp =>
 		{
 			var commandService = new CommandService(new CommandServiceConfig { CaseSensitiveCommands = true, DefaultRunMode = RunMode.Async });
-			return commandService.AddModulesAsync(Assembly.GetExecutingAssembly(), sp).GetAwaiter().GetResult();
+			commandService.AddModulesAsync(Assembly.GetExecutingAssembly(), sp).GetAwaiter().GetResult();
+			return commandService;
 		});
 }

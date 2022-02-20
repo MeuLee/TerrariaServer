@@ -16,7 +16,7 @@ public class ListWorldsModule : ModuleBase<SocketCommandContext>
 	{
 		var request = new ListWorldsRequest();
 		var response = await _mediator.Send(request);
-		var displayMessage = $"Found the following vanilla worlds:\n{string.Join("\n\t", response.Worlds)}";
+		var displayMessage = $"Found the following vanilla worlds:\n\t{string.Join("\n\t", response.Worlds)}";
 		await ReplyAsync(displayMessage);
 	}
 }

@@ -3,7 +3,6 @@ using MediatR;
 using Microsoft.Extensions.Options;
 using System.Text.RegularExpressions;
 using TerrariaServer.Application.Features.Terraria.Shared;
-using TerrariaServer.Features.Terraria.Shared;
 
 namespace TerrariaServer.Application.Features.Terraria.Vanilla;
 

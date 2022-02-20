@@ -2,7 +2,6 @@
 using MediatR;
 using Microsoft.Extensions.Options;
 using TerrariaServer.Application.Features.Terraria.Shared;
-using TerrariaServer.Features.Terraria.Shared;
 
 namespace TerrariaServer.Application.Features.Terraria.Vanilla;
 

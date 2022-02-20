@@ -4,7 +4,7 @@ using Discord.WebSocket;
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
-using TerrariaServer.Features.Terraria.Shared;
+using TerrariaServer.Application.Features.Terraria.Shared;
 
 namespace TerrariaServer.Application.Extensions;
 

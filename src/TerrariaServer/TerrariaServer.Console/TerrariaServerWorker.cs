@@ -3,8 +3,9 @@ using Discord.Commands;
 using Discord.WebSocket;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
+using TerrariaServer.Application;
 
-namespace TerrariaServer.Application;
+namespace TerrariaServer.Console;
 
 public partial class TerrariaServerWorker
 {
@@ -29,8 +30,6 @@ public partial class TerrariaServerWorker
 	private void RegisterEventHandlers()
 	{
 		_client.MessageReceived += MessageReceivedHandler;
-		_client.Log += LogHandler;
-		_commandService.Log += LogHandler;
 	}
 
 	private async Task MessageReceivedHandler(SocketMessage message)
@@ -42,12 +41,7 @@ public partial class TerrariaServerWorker
 			return;
 		if (!socketUserMessage.HasStringPrefix(_discordConfig.Prefix, out var argumentsPosition))
 			return;
-		var commandResult = await _commandService.ExecuteAsync(context, argumentsPosition, _serviceProvider);
-	}
-
-	private async Task LogHandler(LogMessage log)
-	{
-		await Console.Out.WriteLineAsync(log.Message);
+		_ = await _commandService.ExecuteAsync(context, argumentsPosition, _serviceProvider);
 	}
 }
 

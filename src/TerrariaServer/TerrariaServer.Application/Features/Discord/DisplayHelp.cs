@@ -1,29 +1,47 @@
 ﻿using Discord.Commands;
+using MediatR;
 using Microsoft.Extensions.Options;
 using System.Reflection;
 using System.Text;
-using TerrariaServer.Application.Extensions;
 
-namespace TerrariaServer.Application.Features;
+namespace TerrariaServer.Application.Features.Discord;
 
 public class DisplayHelpModule : ModuleBase<SocketCommandContext>
 {
-	private readonly DiscordConfiguration _discordConfig;
-	private readonly string _displayHelpMessage;
+	private readonly IMediator _mediator;
 
-	internal DisplayHelpModule(IOptions<DiscordConfiguration> discordConfig)
-	{
-		_discordConfig = discordConfig.Value;
-		_displayHelpMessage = GetDisplayHelpMessage();
-	}
+	internal DisplayHelpModule(IMediator mediator)
+		=> _mediator = mediator;
 
 	[Command("help")]
 	internal async Task DisplayHelpAsync()
 	{
-		await Context.Channel.SendMessageAsync(_displayHelpMessage);
+		var request = new DisplayHelpRequest(Context.Message.Id);
+		var response = await _mediator.Send(request);
+		await ReplyAsync(response.HelpMessage);
+	}	
+}
+
+internal record DisplayHelpRequest(ulong MessageId) : IRequest<DisplayHelpResponse>;
+internal record DisplayHelpResponse(string HelpMessage);
+
+internal class DisplayHelpHandler : IRequestHandler<DisplayHelpRequest, DisplayHelpResponse>
+{
+	private readonly DiscordConfiguration _discordConfig;
+	private string? _helpMessage;
+
+	public DisplayHelpHandler(IOptions<DiscordConfiguration> discordConfig)
+	{
+		_discordConfig = discordConfig.Value;
 	}
 
-	private string GetDisplayHelpMessage()
+	public Task<DisplayHelpResponse> Handle(DisplayHelpRequest request, CancellationToken cancellationToken)
+	{
+		var helpMessage = _helpMessage ??= GenerateHelpMessage(_discordConfig.Prefix);
+		return Task.FromResult(new DisplayHelpResponse(helpMessage));
+	}
+
+	private static string GenerateHelpMessage(string commandPrefix)
 	{
 		var modules = Assembly
 			.GetExecutingAssembly()
@@ -41,7 +59,7 @@ public class DisplayHelpModule : ModuleBase<SocketCommandContext>
 				parametersStringBuilder.Append($" <{parameter.Name}> ");
 			}
 
-			stringBuilder.AppendLine($"\tUsage: {_discordConfig.Prefix}{command}{parametersStringBuilder}");
+			stringBuilder.AppendLine($"\tUsage: {commandPrefix}{command}{parametersStringBuilder}");
 		}
 
 		return stringBuilder.ToString();

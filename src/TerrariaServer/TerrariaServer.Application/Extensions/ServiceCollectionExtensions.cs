@@ -4,16 +4,15 @@ using Discord.WebSocket;
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
-using TerrariaServer.Application.Features.Vanilla;
+using TerrariaServer.Features.Terraria.Shared;
 
 namespace TerrariaServer.Application.Extensions;
 
 public static class ServiceCollectionExtensions
 {
 	public static IServiceCollection AddApplication(this IServiceCollection services)
-		=> services.AddSingleton<World>()
-			.AddMediatR(Assembly.GetExecutingAssembly())
-			.AddHostedService<TerrariaServerWorker>();
+		=> services.AddSingleton<WorldService>()
+			.AddMediatR(Assembly.GetExecutingAssembly());
 
 	public static IServiceCollection AddDiscord(this IServiceCollection services)
 		=> services.AddDiscordSocketClient()

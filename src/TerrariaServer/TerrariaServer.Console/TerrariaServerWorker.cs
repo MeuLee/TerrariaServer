@@ -96,7 +96,8 @@ internal static class UserMessageExtensions
 internal static class ServiceCollectionExtensions
 {
 	internal static IServiceCollection AddDiscord(this IServiceCollection services)
-		=> services.AddHostedService<TerrariaServerWorker>()
+		=> services
+			.AddHostedService<TerrariaServerWorker>()
 			.AddDiscordSocketClient()
 			.AddCommandService();
 
@@ -104,10 +105,10 @@ internal static class ServiceCollectionExtensions
 		=> services.AddSingleton(new DiscordSocketClient(new DiscordSocketConfig { MessageCacheSize = 50, GatewayIntents = GatewayIntents.Guilds | GatewayIntents.GuildMessages }));
 
 	private static IServiceCollection AddCommandService(this IServiceCollection services)
-		=> services.AddSingleton(sp =>
+		=> services.AddSingleton(serviceProvider =>
 		{
 			var commandService = new CommandService(new CommandServiceConfig { CaseSensitiveCommands = true, DefaultRunMode = RunMode.Async });
-			commandService.AddModulesAsync(Assembly.GetExecutingAssembly(), sp).GetAwaiter().GetResult();
+			commandService.AddModulesAsync(Assembly.GetExecutingAssembly(), serviceProvider).GetAwaiter().GetResult();
 			return commandService;
 		});
 }

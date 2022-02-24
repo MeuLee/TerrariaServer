@@ -108,7 +108,8 @@ internal static class ServiceCollectionExtensions
 		=> services.AddSingleton(serviceProvider =>
 		{
 			var commandService = new CommandService(new CommandServiceConfig { CaseSensitiveCommands = true, DefaultRunMode = RunMode.Async });
-			commandService.AddModulesAsync(Assembly.GetExecutingAssembly(), serviceProvider).GetAwaiter().GetResult();
+			commandService.AddModulesAsync(typeof(Application.Features.Terraria.Vanilla.ListWorldsModule).Assembly, serviceProvider)
+				.GetAwaiter().GetResult();
 			return commandService;
 		});
 }

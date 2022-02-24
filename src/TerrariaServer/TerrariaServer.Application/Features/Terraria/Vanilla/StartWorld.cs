@@ -3,6 +3,7 @@ using MediatR;
 using Microsoft.Extensions.Options;
 using System.Text.RegularExpressions;
 using TerrariaServer.Application.Features.Terraria.Shared;
+using TerrariaServer.Application.Messaging;
 
 namespace TerrariaServer.Application.Features.Terraria.Vanilla;
 
@@ -43,6 +44,16 @@ public class StartWorldModule : ModuleBase<SocketCommandContext>
 }
 
 internal record StartWorldRequest(ulong HostUserId, string WorldName, string Password, ulong MessageId) : IRequest<Unit>;
+internal record StartWorldMessage(string? Description, SystemdType Type, string ExecStart, bool Enable) : IMessage;
+enum SystemdType
+{
+	Simple,
+	Forking,
+	OneShot,
+	DBus,
+	Notify,
+	Idle
+}
 internal static class StartWorldConstants
 {
 	public static readonly TimeSpan WorldStartTimeout = TimeSpan.FromMinutes(1);
@@ -52,11 +63,12 @@ internal class StartWorldHandler : IRequestHandler<StartWorldRequest>
 {
 	private const string PasswordRegex = "^[\\d\\w]+$";
 
-	private readonly VanillaConfiguration _vanillaConfig;
 	private readonly WorldService _worldService;
+	private readonly IRabbitClientMessageProducer _messageProducer;
+	private readonly VanillaConfiguration _vanillaConfig;
 
-	public StartWorldHandler(WorldService worldService, IOptions<VanillaConfiguration> vanillaConfig)
-		=> (_vanillaConfig, _worldService) = (vanillaConfig.Value, worldService);
+	public StartWorldHandler(WorldService worldService, IRabbitClientMessageProducer messageProducer, IOptions<VanillaConfiguration> vanillaConfig)
+		=> (_worldService, _messageProducer, _vanillaConfig) = (worldService, messageProducer, vanillaConfig.Value);
 
 	public async Task<Unit> Handle(StartWorldRequest request, CancellationToken cancellationToken)
 	{
@@ -72,12 +84,17 @@ internal class StartWorldHandler : IRequestHandler<StartWorldRequest>
 
 		try
 		{
+			_messageProducer.ProduceMessage(new StartWorldMessage("toé tes une description", SystemdType.Simple, request.WorldName, false));
 			await Task.Delay(5 * 1000, cancellationToken) // start the world
 				.WaitAsync(StartWorldConstants.WorldStartTimeout, cancellationToken);
 		}
 		catch (TimeoutException)
 		{
 			throw new WorldStartTimeoutException();
+		}
+		catch (Exception ex)
+		{
+
 		}
 		_worldService.MarkWorldAsStarted(new WorldStartInfo(request.HostUserId, request.WorldName, request.Password));
 

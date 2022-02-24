@@ -7,12 +7,25 @@ using System.Text.Json;
 
 namespace TerrariaServer.Application.Messaging;
 
+internal interface IMessage { }
+
+internal interface IRabbitClientMessageConsumer
+{
+	void StartConsumingMessages();
+	void StopConsumingMessages();
+}
+
+internal interface IRabbitClientMessageProducer
+{
+	void ProduceMessage(IMessage message);
+}
+
 // can share ioptions between publisher and listener for hostname, port etc, all of which would have default values
 internal class RabbitClientWorker : IHostedService
 {
-	private readonly RabbitClientMessageConsumer _messageConsumer;
+	private readonly IRabbitClientMessageConsumer _messageConsumer;
 
-	public RabbitClientWorker(RabbitClientMessageConsumer messageConsumer)
+	public RabbitClientWorker(IRabbitClientMessageConsumer messageConsumer)
 	{
 		_messageConsumer = messageConsumer;
 	}
@@ -30,20 +43,18 @@ internal class RabbitClientWorker : IHostedService
 	}
 }
 
-internal interface IMessage { }
-
-internal partial class RabbitClientMessageConsumer
+internal partial class RabbitClientMessageManager : IRabbitClientMessageConsumer
 {
 	private readonly Dictionary<Type, AsyncEventingBasicConsumer> _supportedChannels;
 	private readonly IConnection _connection;
 
-	internal RabbitClientMessageConsumer(params Assembly[] assemblies)
+	internal RabbitClientMessageManager(params Assembly[] assemblies)
 	{
 		_connection = new ConnectionFactory { HostName = "localhost" }.CreateConnection();
 		_supportedChannels = GenerateRabbitQueues(_connection, assemblies);
 	}
 
-	internal void StartConsumingMessages()
+	public void StartConsumingMessages()
 	{
 		foreach (var channel in _supportedChannels.Values)
 		{
@@ -51,7 +62,7 @@ internal partial class RabbitClientMessageConsumer
 		}
 	}
 
-	internal void StopConsumingMessages()
+	public void StopConsumingMessages()
 	{
 		foreach (var channel in _supportedChannels.Values)
 		{
@@ -59,11 +70,13 @@ internal partial class RabbitClientMessageConsumer
 		}
 	}
 
-	private async Task ConsumeMessagesAsync(object sender, BasicDeliverEventArgs serializedMessage)
+	private Task ConsumeMessagesAsync(object sender, BasicDeliverEventArgs serializedMessage)
 	{
 		var message = JsonSerializer.Deserialize<IMessage>(serializedMessage.Body.Span);
+		// dispatch the message to mediatr handler
+		// ack the message once mediator send completes
+		return Task.CompletedTask;
 	}
-
 
 	private static Dictionary<Type, AsyncEventingBasicConsumer> GenerateRabbitQueues(IConnection connection, params Assembly[] assemblies)
 		=> assemblies
@@ -78,31 +91,20 @@ internal partial class RabbitClientMessageConsumer
 			});
 }
 
-internal partial class RabbitClientMessageConsumer : IDisposable
-{
-	public void Dispose() => _connection.Dispose();
-}
-
-internal partial class RabbitClientMessageProducer
-{
-	private readonly IConnection _connection;
-
-	public RabbitClientMessageProducer()
-	{
-		_connection = new ConnectionFactory { HostName = "localhost" }.CreateConnection();
-	}
-
-	internal void ProduceMessage(IMessage message)
+internal partial class RabbitClientMessageManager : IRabbitClientMessageProducer
+{ 
+	public void ProduceMessage(IMessage message)
 	{
 		using var channel = _connection.CreateModel();
 		var queueName = message.GetType().Name;
 		channel.QueueDeclare(queue: queueName);
 		var body = JsonSerializer.SerializeToUtf8Bytes(message);
 		channel.BasicPublish(string.Empty, string.Empty, null, body);
+		// wait until message is acked by consumer
 	}
 }
 
-internal partial class RabbitClientMessageProducer : IDisposable
+internal partial class RabbitClientMessageManager : IDisposable
 {
 	public void Dispose() => _connection.Dispose();
 }
@@ -111,6 +113,7 @@ internal static class ServiceCollectionExtensions
 {
 	internal static IServiceCollection AddRabbitMqMessaging(this IServiceCollection services)
 		=> services.AddHostedService<RabbitClientWorker>()
-			.AddSingleton(new RabbitClientMessageConsumer(Assembly.GetExecutingAssembly()))
-			.AddSingleton<RabbitClientMessageProducer>();
+			.AddSingleton(new RabbitClientMessageManager(Assembly.GetExecutingAssembly()))
+			.AddSingleton<IRabbitClientMessageConsumer>(serviceProvider => serviceProvider.GetRequiredService<RabbitClientMessageManager>())
+			.AddSingleton<IRabbitClientMessageProducer>(serviceProvider => serviceProvider.GetRequiredService<RabbitClientMessageManager>());
 }

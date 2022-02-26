@@ -1,6 +1,6 @@
 ﻿using Discord.Commands;
-using MediatR;
 using Microsoft.Extensions.Options;
+using Paramore.Brighter;
 using System.Text.RegularExpressions;
 using TerrariaServer.Application.Features.Terraria.Shared;
 using TerrariaServer.Application.Messaging;
@@ -9,10 +9,10 @@ namespace TerrariaServer.Application.Features.Terraria.Vanilla;
 
 public class StartWorldModule : ModuleBase<SocketCommandContext>
 {
-	private readonly IMediator _mediator;
+	private readonly IAmACommandProcessor _commandProcessor;
 
-	internal StartWorldModule(IMediator mediator)
-		=> _mediator = mediator;
+	internal StartWorldModule(IAmACommandProcessor commandProcessor)
+		=> _commandProcessor = commandProcessor;
 
 	[Command("start")]
 	internal async Task StartWorldAsync(string worldName, string password)
@@ -21,8 +21,8 @@ public class StartWorldModule : ModuleBase<SocketCommandContext>
 		try
 		{
 			await ReplyAsync($"Starting world {worldName}.");
-			await _mediator.Send(request);
-			await ReplyAsync($"World {worldName} is up and running.");
+			await _commandProcessor.SendAsync(request);
+			await ReplyAsync($"World {worldName} is up and running."); // not really since the world is started asynchronously
 		}
 		catch (InvalidPasswordException)
 		{
@@ -43,7 +43,11 @@ public class StartWorldModule : ModuleBase<SocketCommandContext>
 	}
 }
 
-internal record StartWorldRequest(ulong HostUserId, string WorldName, string Password, ulong MessageId) : IRequest<Unit>;
+internal record StartWorldRequest(ulong HostUserId, string WorldName, string Password, ulong MessageId) : IRequest
+{
+	public Guid Id { get; set; }
+}
+
 internal record StartWorldMessage(string? Description, SystemdType Type, string ExecStart, bool Enable) : IMessage;
 enum SystemdType
 {
@@ -59,7 +63,7 @@ internal static class StartWorldConstants
 	public static readonly TimeSpan WorldStartTimeout = TimeSpan.FromMinutes(1);
 }
 
-internal class StartWorldHandler : IRequestHandler<StartWorldRequest>
+internal class StartWorldHandler : RequestHandlerAsync<StartWorldRequest>
 {
 	private const string PasswordRegex = "^[\\d\\w]+$";
 
@@ -70,21 +74,21 @@ internal class StartWorldHandler : IRequestHandler<StartWorldRequest>
 	public StartWorldHandler(WorldService worldService, RabbitClientMessageProducer messageProducer, IOptions<VanillaConfiguration> vanillaConfig)
 		=> (_worldService, _messageProducer, _vanillaConfig) = (worldService, messageProducer, vanillaConfig.Value);
 
-	public async Task<Unit> Handle(StartWorldRequest request, CancellationToken cancellationToken)
+	public override async Task<StartWorldRequest> HandleAsync(StartWorldRequest command, CancellationToken cancellationToken)
 	{
-		if (_worldService.IsWorldStarted(request.WorldName))
+		if (_worldService.IsWorldStarted(command.WorldName))
 			throw new WorldIsAlreadyStartedException();
 
-		if (!Regex.IsMatch(request.Password, PasswordRegex))
+		if (!Regex.IsMatch(command.Password, PasswordRegex))
 			throw new InvalidPasswordException();
 
-		var worldFilePath = Path.Combine(_vanillaConfig.WorldsFolderPath, $"{request.WorldName.Replace(' ', '_')}.wld");
+		var worldFilePath = Path.Combine(_vanillaConfig.WorldsFolderPath, $"{command.WorldName.Replace(' ', '_')}.wld");
 		if (!File.Exists(worldFilePath))
 			throw new WorldDoesNotExistException();
 
 		try
 		{
-			_messageProducer.ProduceMessage(new StartWorldMessage("toé tes une description", SystemdType.Simple, request.WorldName, false));
+			_messageProducer.ProduceMessage(new StartWorldMessage("toé tes une description", SystemdType.Simple, command.WorldName, false));
 			await Task.Delay(5 * 1000, cancellationToken) // start the world
 				.WaitAsync(StartWorldConstants.WorldStartTimeout, cancellationToken);
 		}
@@ -92,13 +96,10 @@ internal class StartWorldHandler : IRequestHandler<StartWorldRequest>
 		{
 			throw new WorldStartTimeoutException();
 		}
-		_worldService.MarkWorldAsStarted(new WorldStartInfo(request.HostUserId, request.WorldName, request.Password));
+		_worldService.MarkWorldAsStarted(new WorldStartInfo(command.HostUserId, command.WorldName, command.Password)); // not really since the world is started asynchronously
 
-		return Unit.Value;
+		return await base.HandleAsync(command, cancellationToken);
 	}
-
-	// todo move to its own feature
-	
 }
 
 internal class InvalidPasswordException : Exception { }

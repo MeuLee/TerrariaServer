@@ -1,6 +1,4 @@
-﻿using MediatR;
-
-namespace TerrariaServer.Application.Features.Systemd;
+﻿namespace TerrariaServer.Application.Features.Systemd;
 
 internal record CreateAndStartSystemdRequest(Unit Unit, Service Service, bool Enable) : IRequest<CreateAndStartSystemdResponse>;
 internal record Unit(string? Description);

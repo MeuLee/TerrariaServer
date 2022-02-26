@@ -1,5 +1,4 @@
 ﻿using Discord.Commands;
-using MediatR;
 using Microsoft.Extensions.Options;
 using System.Reflection;
 using System.Text;

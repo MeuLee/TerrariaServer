@@ -1,16 +1,16 @@
 ﻿using Discord.Commands;
-using MediatR;
 using Microsoft.Extensions.Options;
+using Paramore.Brighter;
 using TerrariaServer.Application.Features.Terraria.Shared;
 
 namespace TerrariaServer.Application.Features.Terraria.Vanilla;
 
 public class StopWorldModule : ModuleBase<SocketCommandContext>
 {
-	private readonly IMediator _mediator;
+	private readonly IAmACommandProcessor _commandProcessor;
 
-	internal StopWorldModule(IMediator mediator)
-		=> _mediator = mediator;
+	internal StopWorldModule(IAmACommandProcessor commandProcessor)
+		=> _commandProcessor = commandProcessor;
 
 	[Command("stop")]
 	internal async Task StopWorldAsync(string worldName)
@@ -19,7 +19,7 @@ public class StopWorldModule : ModuleBase<SocketCommandContext>
 		try
 		{
 			await ReplyAsync($"Stopping world {worldName}...");
-			await _mediator.Send(stopWorldRequest);
+			await _commandProcessor.SendAsync(stopWorldRequest);
 			await ReplyAsync($"Stopped world {worldName} successfully.");
 		}
 		catch (CantStopWorldException)
@@ -33,9 +33,12 @@ public class StopWorldModule : ModuleBase<SocketCommandContext>
 	}
 }
 
-internal record StopWorldRequest(string WorldName, ulong HostUserId, ulong MessageId) : IRequest;
+internal record StopWorldRequest(string WorldName, ulong HostUserId, ulong MessageId) : IRequest
+{
+	public Guid Id { get; set; }
+}
 
-internal class StopWorldHandler : IRequestHandler<StopWorldRequest>
+internal class StopWorldHandler : RequestHandlerAsync<StopWorldRequest>
 {
 	private readonly DiscordConfiguration _discordConfig;
 	private readonly WorldService _worldService;
@@ -46,18 +49,19 @@ internal class StopWorldHandler : IRequestHandler<StopWorldRequest>
 		_discordConfig = discordConfig.Value;
 	}
 
-	public async Task<Unit> Handle(StopWorldRequest request, CancellationToken cancellationToken)
+	public override async Task<StopWorldRequest> HandleAsync(StopWorldRequest command, CancellationToken cancellationToken)
 	{
-		if (!_worldService.IsWorldStarted(request.WorldName))
+		if (!_worldService.IsWorldStarted(command.WorldName))
 			throw new WorldIsNotStartedException();
 
-		var world = _worldService.GetWorld(request.WorldName);
-		if (world.User != request.HostUserId && request.HostUserId != _discordConfig.AdminUser)
+		var world = _worldService.GetWorld(command.WorldName);
+		if (world.User != command.HostUserId && command.HostUserId != _discordConfig.AdminUser)
 			throw new CantStopWorldException();
 
 		await Task.Delay(5 * 1000, cancellationToken); // stop world
 		_worldService.MarkWorldAsStopped(world.WorldName);
-		return Unit.Value;
+
+		return await base.HandleAsync(command, cancellationToken);
 	}
 }
 

@@ -1,40 +1,40 @@
 ﻿using Discord.Commands;
-using MediatR;
 using Microsoft.Extensions.Options;
+using Paramore.Darker;
 
 namespace TerrariaServer.Application.Features.Terraria.Vanilla;
 
 public class ListWorldsModule : ModuleBase<SocketCommandContext>
 {
-	private readonly IMediator _mediator;
+	private readonly IQueryProcessor _queryProcessor;
 
-	internal ListWorldsModule(IMediator mediator)
-		=> _mediator = mediator;
+	internal ListWorldsModule(IQueryProcessor queryProcessor)
+		=> _queryProcessor = queryProcessor;
 
 	[Command("list worlds")]
 	internal async Task ListWorldsAsync()
 	{
 		var request = new ListWorldsRequest();
-		var response = await _mediator.Send(request);
+		var response = _queryProcessor.Execute(request);
 		var displayMessage = $"Found the following vanilla worlds:\n\t{string.Join("\n\t", response.Worlds)}";
 		await ReplyAsync(displayMessage);
 	}
 }
 
-internal record ListWorldsRequest : IRequest<ListWorldsResponse>;
+internal record ListWorldsRequest : IQuery<ListWorldsResponse>;
 internal record ListWorldsResponse(List<string> Worlds);
 
-internal class ListWorldsHandler : IRequestHandler<ListWorldsRequest, ListWorldsResponse>
+internal class ListWorldsHandler : QueryHandler<ListWorldsRequest, ListWorldsResponse>
 {
 	private readonly VanillaConfiguration _vanillaConfig;
 
 	public ListWorldsHandler(IOptions<VanillaConfiguration> vanillaConfig)
 		=> _vanillaConfig = vanillaConfig.Value;
 
-	public Task<ListWorldsResponse> Handle(ListWorldsRequest request, CancellationToken cancellationToken)
+	public override ListWorldsResponse Execute(ListWorldsRequest query)
 	{
 		var worlds = ListWorlds();
-		return Task.FromResult(new ListWorldsResponse(worlds));
+		return new ListWorldsResponse(worlds);
 	}
 
 	private List<string> ListWorlds()

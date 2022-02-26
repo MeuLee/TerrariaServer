@@ -9,23 +9,12 @@ namespace TerrariaServer.Application.Messaging;
 
 internal interface IMessage { }
 
-internal interface IRabbitClientMessageConsumer
-{
-	void StartConsumingMessages();
-	void StopConsumingMessages();
-}
-
-internal interface IRabbitClientMessageProducer
-{
-	void ProduceMessage(IMessage message);
-}
-
 // can share ioptions between publisher and listener for hostname, port etc, all of which would have default values
 internal class RabbitClientWorker : IHostedService
 {
-	private readonly IRabbitClientMessageConsumer _messageConsumer;
+	private readonly RabbitClientMessageConsumer _messageConsumer;
 
-	public RabbitClientWorker(IRabbitClientMessageConsumer messageConsumer)
+	public RabbitClientWorker(RabbitClientMessageConsumer messageConsumer)
 	{
 		_messageConsumer = messageConsumer;
 	}
@@ -43,12 +32,12 @@ internal class RabbitClientWorker : IHostedService
 	}
 }
 
-internal partial class RabbitClientMessageManager : IRabbitClientMessageConsumer
+internal partial class RabbitClientMessageConsumer
 {
 	private readonly Dictionary<Type, AsyncEventingBasicConsumer> _supportedChannels;
 	private readonly IConnection _connection;
 
-	internal RabbitClientMessageManager(params Assembly[] assemblies)
+	internal RabbitClientMessageConsumer(params Assembly[] assemblies)
 	{
 		_connection = new ConnectionFactory { HostName = "localhost" }.CreateConnection();
 		_supportedChannels = GenerateRabbitQueues(_connection, assemblies);
@@ -91,20 +80,32 @@ internal partial class RabbitClientMessageManager : IRabbitClientMessageConsumer
 			});
 }
 
-internal partial class RabbitClientMessageManager : IRabbitClientMessageProducer
-{ 
+internal partial class RabbitClientMessageProducer
+{
+	private readonly IConnection _connection;
+
+	public RabbitClientMessageProducer()
+	{
+		_connection = new ConnectionFactory { HostName = "localhost" }.CreateConnection();
+	}
+
 	public void ProduceMessage(IMessage message)
 	{
 		using var channel = _connection.CreateModel();
 		var queueName = message.GetType().Name;
 		channel.QueueDeclare(queue: queueName);
 		var body = JsonSerializer.SerializeToUtf8Bytes(message);
-		channel.BasicPublish(string.Empty, string.Empty, null, body);
+		channel.BasicPublish(string.Empty, string.Empty, null, body); // this message is not received by the handler event ?_?
 		// wait until message is acked by consumer
 	}
 }
 
-internal partial class RabbitClientMessageManager : IDisposable
+internal partial class RabbitClientMessageConsumer : IDisposable
+{
+	public void Dispose() => _connection.Dispose();
+}
+
+internal partial class RabbitClientMessageProducer : IDisposable
 {
 	public void Dispose() => _connection.Dispose();
 }
@@ -113,7 +114,6 @@ internal static class ServiceCollectionExtensions
 {
 	internal static IServiceCollection AddRabbitMqMessaging(this IServiceCollection services)
 		=> services.AddHostedService<RabbitClientWorker>()
-			.AddSingleton(new RabbitClientMessageManager(Assembly.GetExecutingAssembly()))
-			.AddSingleton<IRabbitClientMessageConsumer>(serviceProvider => serviceProvider.GetRequiredService<RabbitClientMessageManager>())
-			.AddSingleton<IRabbitClientMessageProducer>(serviceProvider => serviceProvider.GetRequiredService<RabbitClientMessageManager>());
+			.AddSingleton(new RabbitClientMessageConsumer(Assembly.GetExecutingAssembly()))
+			.AddSingleton<RabbitClientMessageProducer>();
 }

@@ -64,10 +64,10 @@ internal class StartWorldHandler : IRequestHandler<StartWorldRequest>
 	private const string PasswordRegex = "^[\\d\\w]+$";
 
 	private readonly WorldService _worldService;
-	private readonly IRabbitClientMessageProducer _messageProducer;
+	private readonly RabbitClientMessageProducer _messageProducer;
 	private readonly VanillaConfiguration _vanillaConfig;
 
-	public StartWorldHandler(WorldService worldService, IRabbitClientMessageProducer messageProducer, IOptions<VanillaConfiguration> vanillaConfig)
+	public StartWorldHandler(WorldService worldService, RabbitClientMessageProducer messageProducer, IOptions<VanillaConfiguration> vanillaConfig)
 		=> (_worldService, _messageProducer, _vanillaConfig) = (worldService, messageProducer, vanillaConfig.Value);
 
 	public async Task<Unit> Handle(StartWorldRequest request, CancellationToken cancellationToken)

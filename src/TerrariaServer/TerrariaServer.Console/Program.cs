@@ -22,6 +22,8 @@ using var host = hostBuilder.Build();
 await host.RunAsync();
 
 // rabbitmq for out of process messaging
+// setup rabbitmq gui
+// script to start rabbitmq + discord bot
 // create systemd
 // tests?
 // logging? could log each request with structured logging, in a pipelinebehavior

@@ -39,15 +39,16 @@ internal partial class RabbitClientMessageConsumer
 
 	internal RabbitClientMessageConsumer(params Assembly[] assemblies)
 	{
-		_connection = new ConnectionFactory { HostName = "localhost" }.CreateConnection();
+		_connection = new ConnectionFactory { HostName = "localhost", DispatchConsumersAsync = true }.CreateConnection();
 		_supportedChannels = GenerateRabbitQueues(_connection, assemblies);
 	}
 
 	public void StartConsumingMessages()
 	{
-		foreach (var channel in _supportedChannels.Values)
+		foreach (var (messageType, channel) in _supportedChannels)
 		{
 			channel.Received += ConsumeMessageAsync;
+			channel.Model.BasicConsume(channel, messageType.Name, autoAck: true);
 		}
 	}
 

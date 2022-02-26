@@ -92,10 +92,6 @@ internal class StartWorldHandler : IRequestHandler<StartWorldRequest>
 		{
 			throw new WorldStartTimeoutException();
 		}
-		catch (Exception ex)
-		{
-
-		}
 		_worldService.MarkWorldAsStarted(new WorldStartInfo(request.HostUserId, request.WorldName, request.Password));
 
 		return Unit.Value;

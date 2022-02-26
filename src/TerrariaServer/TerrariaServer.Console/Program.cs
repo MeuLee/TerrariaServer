@@ -22,7 +22,7 @@ using var host = hostBuilder.Build();
 await host.RunAsync();
 
 // rabbitmq for out of process messaging
-// setup rabbitmq gui
+	// see if brighter can be leveraged to help with strongly typed messages https://paramore.readthedocs.io/en/latest/RabbitMQConfiguration.html
 // script to start rabbitmq + discord bot
 // create systemd
 // tests?

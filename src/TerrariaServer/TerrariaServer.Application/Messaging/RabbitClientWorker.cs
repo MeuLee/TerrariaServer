@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using MediatR;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
@@ -36,11 +37,13 @@ internal partial class RabbitClientMessageConsumer
 {
 	private readonly Dictionary<Type, AsyncEventingBasicConsumer> _supportedChannels;
 	private readonly IConnection _connection;
+	private readonly IMediator _mediator;
 
-	internal RabbitClientMessageConsumer(params Assembly[] assemblies)
+	internal RabbitClientMessageConsumer(IMediator mediator, params Assembly[] assemblies)
 	{
 		_connection = new ConnectionFactory { HostName = "localhost", DispatchConsumersAsync = true }.CreateConnection();
 		_supportedChannels = GenerateRabbitQueues(_connection, assemblies);
+		_mediator = mediator;
 	}
 
 	public void StartConsumingMessages()
@@ -95,8 +98,8 @@ internal partial class RabbitClientMessageProducer
 		using var channel = _connection.CreateModel();
 		var queueName = message.GetType().Name;
 		channel.QueueDeclare(queue: queueName, exclusive: false, autoDelete: false);
-		var body = JsonSerializer.SerializeToUtf8Bytes(message);
-		channel.BasicPublish(string.Empty, queueName, null, body); // this message is not received by the handler event ?_?
+		var body = JsonSerializer.SerializeToUtf8Bytes(message as object); // important: serialize as object rather than IMessage to not lose any property
+		channel.BasicPublish(string.Empty, queueName, null, body);
 		// wait until message is acked by consumer
 	}
 }
@@ -115,6 +118,6 @@ internal static class ServiceCollectionExtensions
 {
 	internal static IServiceCollection AddRabbitMqMessaging(this IServiceCollection services)
 		=> services.AddHostedService<RabbitClientWorker>()
-			.AddSingleton(new RabbitClientMessageConsumer(Assembly.GetExecutingAssembly()))
+			.AddSingleton(serviceProvider => new RabbitClientMessageConsumer(serviceProvider.GetRequiredService<IMediator>(), Assembly.GetExecutingAssembly()))
 			.AddSingleton<RabbitClientMessageProducer>();
 }

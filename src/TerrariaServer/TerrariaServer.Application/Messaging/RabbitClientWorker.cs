@@ -47,7 +47,7 @@ internal partial class RabbitClientMessageConsumer
 	{
 		foreach (var channel in _supportedChannels.Values)
 		{
-			channel.Received += ConsumeMessagesAsync;
+			channel.Received += ConsumeMessageAsync;
 		}
 	}
 
@@ -55,11 +55,11 @@ internal partial class RabbitClientMessageConsumer
 	{
 		foreach (var channel in _supportedChannels.Values)
 		{
-			channel.Received -= ConsumeMessagesAsync;
+			channel.Received -= ConsumeMessageAsync;
 		}
 	}
 
-	private Task ConsumeMessagesAsync(object sender, BasicDeliverEventArgs serializedMessage)
+	private Task ConsumeMessageAsync(object sender, BasicDeliverEventArgs serializedMessage)
 	{
 		var message = JsonSerializer.Deserialize<IMessage>(serializedMessage.Body.Span);
 		// dispatch the message to mediatr handler
@@ -75,7 +75,7 @@ internal partial class RabbitClientMessageConsumer
 			.ToDictionary(keySelector: x => x, elementSelector: x =>
 			{
 				var channel = connection.CreateModel();
-				channel.QueueDeclare(queue: x.Name);
+				channel.QueueDeclare(queue: x.Name, exclusive: false, autoDelete: false);
 				return new AsyncEventingBasicConsumer(channel);
 			});
 }
@@ -93,9 +93,9 @@ internal partial class RabbitClientMessageProducer
 	{
 		using var channel = _connection.CreateModel();
 		var queueName = message.GetType().Name;
-		channel.QueueDeclare(queue: queueName);
+		channel.QueueDeclare(queue: queueName, exclusive: false, autoDelete: false);
 		var body = JsonSerializer.SerializeToUtf8Bytes(message);
-		channel.BasicPublish(string.Empty, string.Empty, null, body); // this message is not received by the handler event ?_?
+		channel.BasicPublish(string.Empty, queueName, null, body); // this message is not received by the handler event ?_?
 		// wait until message is acked by consumer
 	}
 }

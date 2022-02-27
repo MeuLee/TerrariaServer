@@ -3,7 +3,6 @@ using Microsoft.Extensions.Options;
 using Paramore.Brighter;
 using System.Text.RegularExpressions;
 using TerrariaServer.Application.Features.Terraria.Shared;
-using TerrariaServer.Application.Messaging;
 
 namespace TerrariaServer.Application.Features.Terraria.Vanilla;
 
@@ -17,7 +16,7 @@ public class StartWorldModule : ModuleBase<SocketCommandContext>
 	[Command("start")]
 	internal async Task StartWorldAsync(string worldName, string password)
 	{
-		var request = new StartWorldRequest(Context.User.Id, worldName, password, Context.Message.Id);
+		var request = new StartWorldRequest(Context.User.Id, worldName, password);
 		try
 		{
 			await ReplyAsync($"Starting world {worldName}.");
@@ -43,36 +42,25 @@ public class StartWorldModule : ModuleBase<SocketCommandContext>
 	}
 }
 
-internal record StartWorldRequest(ulong HostUserId, string WorldName, string Password, ulong MessageId) : IRequest
+public record StartWorldRequest(ulong HostUserId, string WorldName, string Password) : IRequest
 {
-	public Guid Id { get; set; }
+	public Guid Id { get; set; } = Guid.NewGuid();
 }
 
-internal record StartWorldMessage(string? Description, SystemdType Type, string ExecStart, bool Enable) : IMessage;
-enum SystemdType
-{
-	Simple,
-	Forking,
-	OneShot,
-	DBus,
-	Notify,
-	Idle
-}
 internal static class StartWorldConstants
 {
 	public static readonly TimeSpan WorldStartTimeout = TimeSpan.FromMinutes(1);
 }
 
-internal class StartWorldHandler : RequestHandlerAsync<StartWorldRequest>
+public class StartWorldHandler : RequestHandlerAsync<StartWorldRequest>
 {
 	private const string PasswordRegex = "^[\\d\\w]+$";
 
 	private readonly WorldService _worldService;
-	private readonly RabbitClientMessageProducer _messageProducer;
 	private readonly VanillaConfiguration _vanillaConfig;
 
-	public StartWorldHandler(WorldService worldService, RabbitClientMessageProducer messageProducer, IOptions<VanillaConfiguration> vanillaConfig)
-		=> (_worldService, _messageProducer, _vanillaConfig) = (worldService, messageProducer, vanillaConfig.Value);
+	public StartWorldHandler(WorldService worldService, IOptions<VanillaConfiguration> vanillaConfig)
+		=> (_worldService, _vanillaConfig) = (worldService, vanillaConfig.Value);
 
 	public override async Task<StartWorldRequest> HandleAsync(StartWorldRequest command, CancellationToken cancellationToken)
 	{
@@ -88,8 +76,8 @@ internal class StartWorldHandler : RequestHandlerAsync<StartWorldRequest>
 
 		try
 		{
-			_messageProducer.ProduceMessage(new StartWorldMessage("toé tes une description", SystemdType.Simple, command.WorldName, false));
-			await Task.Delay(5 * 1000, cancellationToken) // start the world
+			// send an event StartWorldCalled or something
+			await Task.Delay(5 * 1000, cancellationToken) // wait until the world is started, or StartWorldCalled handler would say that the world started
 				.WaitAsync(StartWorldConstants.WorldStartTimeout, cancellationToken);
 		}
 		catch (TimeoutException)

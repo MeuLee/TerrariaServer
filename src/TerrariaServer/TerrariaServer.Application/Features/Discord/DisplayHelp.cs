@@ -1,5 +1,6 @@
 ﻿using Discord.Commands;
 using Microsoft.Extensions.Options;
+using Paramore.Darker;
 using System.Reflection;
 using System.Text;
 
@@ -7,24 +8,24 @@ namespace TerrariaServer.Application.Features.Discord;
 
 public class DisplayHelpModule : ModuleBase<SocketCommandContext>
 {
-	private readonly IMediator _mediator;
+	private readonly IQueryProcessor _queryProcessor;
 
-	internal DisplayHelpModule(IMediator mediator)
-		=> _mediator = mediator;
+	internal DisplayHelpModule(IQueryProcessor queryProcessor)
+		=> _queryProcessor = queryProcessor;
 
 	[Command("help")]
 	internal async Task DisplayHelpAsync()
 	{
-		var request = new DisplayHelpRequest(Context.Message.Id);
-		var response = await _mediator.Send(request);
+		var request = new DisplayHelpRequest();
+		var response = _queryProcessor.Execute(request);
 		await ReplyAsync(response.HelpMessage);
 	}	
 }
 
-internal record DisplayHelpRequest(ulong MessageId) : IRequest<DisplayHelpResponse>;
-internal record DisplayHelpResponse(string HelpMessage);
+public record DisplayHelpRequest : IQuery<DisplayHelpResponse>;
+public record DisplayHelpResponse(string HelpMessage);
 
-internal class DisplayHelpHandler : IRequestHandler<DisplayHelpRequest, DisplayHelpResponse>
+public class DisplayHelpHandler : QueryHandler<DisplayHelpRequest, DisplayHelpResponse>
 {
 	private readonly DiscordConfiguration _discordConfig;
 	private string? _helpMessage;
@@ -34,10 +35,10 @@ internal class DisplayHelpHandler : IRequestHandler<DisplayHelpRequest, DisplayH
 		_discordConfig = discordConfig.Value;
 	}
 
-	public Task<DisplayHelpResponse> Handle(DisplayHelpRequest request, CancellationToken cancellationToken)
+	public override DisplayHelpResponse Execute(DisplayHelpRequest query)
 	{
 		var helpMessage = _helpMessage ??= GenerateHelpMessage(_discordConfig.Prefix);
-		return Task.FromResult(new DisplayHelpResponse(helpMessage));
+		return new DisplayHelpResponse(helpMessage);
 	}
 
 	private static string GenerateHelpMessage(string commandPrefix)

@@ -9,9 +9,11 @@
   <ItemGroup>
     <PackageReference Include="Discord.Net" Version="3.3.2" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="6.0.1" />
+    <PackageReference Include="Paramore.Brighter" Version="9.1.2" />
+    <PackageReference Include="Paramore.Brighter.Extensions.DependencyInjection" Version="9.1.2" />
     <PackageReference Include="Paramore.Brighter.MessagingGateway.RMQ" Version="9.1.2" />
     <PackageReference Include="Paramore.Darker" Version="2.0.78" />
-    <PackageReference Include="RabbitMQ.Client" Version="6.2.4" />
+    <PackageReference Include="Paramore.Darker.AspNetCore" Version="2.0.78" />
   </ItemGroup>
 
 </Project>

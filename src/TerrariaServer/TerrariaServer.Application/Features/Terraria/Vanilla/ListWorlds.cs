@@ -21,10 +21,10 @@ public class ListWorldsModule : ModuleBase<SocketCommandContext>
 	}
 }
 
-internal record ListWorldsRequest : IQuery<ListWorldsResponse>;
-internal record ListWorldsResponse(List<string> Worlds);
+public record ListWorldsRequest : IQuery<ListWorldsResponse>;
+public record ListWorldsResponse(List<string> Worlds);
 
-internal class ListWorldsHandler : QueryHandler<ListWorldsRequest, ListWorldsResponse>
+public class ListWorldsHandler : QueryHandler<ListWorldsRequest, ListWorldsResponse>
 {
 	private readonly VanillaConfiguration _vanillaConfig;
 

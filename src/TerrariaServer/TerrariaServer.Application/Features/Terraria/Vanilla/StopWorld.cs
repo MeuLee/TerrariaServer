@@ -15,7 +15,7 @@ public class StopWorldModule : ModuleBase<SocketCommandContext>
 	[Command("stop")]
 	internal async Task StopWorldAsync(string worldName)
 	{
-		var stopWorldRequest = new StopWorldRequest(worldName, Context.User.Id, Context.Message.Id);
+		var stopWorldRequest = new StopWorldRequest(worldName, Context.User.Id);
 		try
 		{
 			await ReplyAsync($"Stopping world {worldName}...");
@@ -33,12 +33,12 @@ public class StopWorldModule : ModuleBase<SocketCommandContext>
 	}
 }
 
-internal record StopWorldRequest(string WorldName, ulong HostUserId, ulong MessageId) : IRequest
+public record StopWorldRequest(string WorldName, ulong HostUserId) : IRequest
 {
-	public Guid Id { get; set; }
+	public Guid Id { get; set; } = Guid.NewGuid();
 }
 
-internal class StopWorldHandler : RequestHandlerAsync<StopWorldRequest>
+public class StopWorldHandler : RequestHandlerAsync<StopWorldRequest>
 {
 	private readonly DiscordConfiguration _discordConfig;
 	private readonly WorldService _worldService;

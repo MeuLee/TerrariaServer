@@ -1,9 +1,15 @@
-﻿namespace TerrariaServer.Application.Features.Systemd;
+﻿using Paramore.Brighter;
 
-internal record CreateAndStartSystemdRequest(Unit Unit, Service Service, bool Enable) : IRequest<CreateAndStartSystemdResponse>;
-internal record Unit(string? Description);
-internal record Service(string ExecStart, SystemdType Type);
-enum SystemdType
+namespace TerrariaServer.Application.Features.Systemd;
+
+public record CreateAndStartSystemdRequest(Unit Unit, Service Service, bool Enable) : IRequest
+{
+	public Guid Id { get; set; } = Guid.NewGuid();
+}
+
+public record Unit(string? Description);
+public record Service(string ExecStart, SystemdType Type);
+public enum SystemdType
 {
 	Simple,
 	Forking,
@@ -13,13 +19,13 @@ enum SystemdType
 	Idle
 }
 
-internal record CreateAndStartSystemdResponse;
+public record CreateAndStartSystemdResponse;
 
-internal class CreateAndStartSystemdHandler : IRequestHandler<CreateAndStartSystemdRequest, CreateAndStartSystemdResponse>
+public class CreateAndStartSystemdHandler : RequestHandlerAsync<CreateAndStartSystemdRequest>
 {
-	public async Task<CreateAndStartSystemdResponse> Handle(CreateAndStartSystemdRequest request, CancellationToken cancellationToken)
+	public override async Task<CreateAndStartSystemdRequest> HandleAsync(CreateAndStartSystemdRequest request, CancellationToken cancellationToken)
 	{
 		await Task.Delay(5 * 1000, cancellationToken); // create the Systemd service
-		return new CreateAndStartSystemdResponse(); // need a response? can be unit?
+		return await base.HandleAsync(request, cancellationToken);
 	}
 }

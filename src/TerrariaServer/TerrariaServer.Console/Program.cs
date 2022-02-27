@@ -21,8 +21,8 @@ hostBuilder.ConfigureAppConfiguration(builder =>
 using var host = hostBuilder.Build();
 await host.RunAsync();
 
+// register darker and brighter, assembly wide
 // rabbitmq for out of process messaging
-	// see if brighter can be leveraged to help with strongly typed messages https://paramore.readthedocs.io/en/latest/RabbitMQConfiguration.html
 // script to start rabbitmq + discord bot
 // create systemd
 // tests?

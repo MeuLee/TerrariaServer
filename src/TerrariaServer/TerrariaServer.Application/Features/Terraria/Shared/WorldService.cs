@@ -1,7 +1,7 @@
 ﻿namespace TerrariaServer.Application.Features.Terraria.Shared;
 
 internal record WorldStartInfo(ulong User, string WorldName, string Password);
-internal class WorldService
+public class WorldService
 {
 	// concurrent?
 	private readonly Dictionary<string, WorldStartInfo> _worlds = new();

@@ -21,7 +21,7 @@ hostBuilder.ConfigureAppConfiguration(builder =>
 using var host = hostBuilder.Build();
 await host.RunAsync();
 
-// register darker and brighter, assembly wide
+// remove logging from brighter
 // rabbitmq for out of process messaging
 // script to start rabbitmq + discord bot
 // create systemd

@@ -52,15 +52,21 @@ internal static class StartWorldConstants
 	public static readonly TimeSpan WorldStartTimeout = TimeSpan.FromMinutes(1);
 }
 
+public record WorldStartedMessage(string WorldName, string Password) : IRequest
+{
+	public Guid Id { get; set; } = Guid.NewGuid();
+}
+
 public class StartWorldHandler : RequestHandlerAsync<StartWorldRequest>
 {
-	private const string PasswordRegex = "^[\\d\\w]+$";
+	private const string PasswordRegex = @"^[\d\w]+$";
 
 	private readonly WorldService _worldService;
 	private readonly VanillaConfiguration _vanillaConfig;
+	private readonly IAmACommandProcessor _commandProcessor;
 
-	public StartWorldHandler(WorldService worldService, IOptions<VanillaConfiguration> vanillaConfig)
-		=> (_worldService, _vanillaConfig) = (worldService, vanillaConfig.Value);
+	public StartWorldHandler(WorldService worldService, IOptions<VanillaConfiguration> vanillaConfig, IAmACommandProcessor commandProcessor)
+		=> (_worldService, _vanillaConfig, _commandProcessor) = (worldService, vanillaConfig.Value, commandProcessor);
 
 	public override async Task<StartWorldRequest> HandleAsync(StartWorldRequest command, CancellationToken cancellationToken)
 	{
@@ -76,15 +82,15 @@ public class StartWorldHandler : RequestHandlerAsync<StartWorldRequest>
 
 		try
 		{
-			// send an event StartWorldCalled or something
-			await Task.Delay(5 * 1000, cancellationToken) // wait until the world is started, or StartWorldCalled handler would say that the world started
-				.WaitAsync(StartWorldConstants.WorldStartTimeout, cancellationToken);
+			var message = new WorldStartedMessage(command.WorldName, command.Password);
+			await _commandProcessor.PublishAsync(message, cancellationToken: cancellationToken);
+			// wait until the world is started, or StartWorldCalled handler would say that the world started
 		}
 		catch (TimeoutException)
 		{
 			throw new WorldStartTimeoutException();
 		}
-		_worldService.MarkWorldAsStarted(new WorldStartInfo(command.HostUserId, command.WorldName, command.Password)); // not really since the world is started asynchronously
+		_worldService.MarkWorldAsStarted(new WorldStartInfo(command.HostUserId, command.WorldName, command.Password));
 
 		return await base.HandleAsync(command, cancellationToken);
 	}

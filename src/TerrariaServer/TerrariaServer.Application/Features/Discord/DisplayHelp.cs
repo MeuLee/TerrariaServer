@@ -16,16 +16,16 @@ public class DisplayHelpModule : ModuleBase<SocketCommandContext>
 	[Command("help")]
 	internal async Task DisplayHelpAsync()
 	{
-		var request = new DisplayHelpRequest();
+		var request = new DisplayHelpQuery();
 		var response = _queryProcessor.Execute(request);
 		await ReplyAsync(response.HelpMessage);
 	}	
 }
 
-public record DisplayHelpRequest : IQuery<DisplayHelpResponse>;
-public record DisplayHelpResponse(string HelpMessage);
+public record DisplayHelpQuery : IQuery<DisplayHelpResult>;
+public record DisplayHelpResult(string HelpMessage);
 
-public class DisplayHelpHandler : QueryHandler<DisplayHelpRequest, DisplayHelpResponse>
+public class DisplayHelpHandler : QueryHandler<DisplayHelpQuery, DisplayHelpResult>
 {
 	private readonly DiscordConfiguration _discordConfig;
 	private string? _helpMessage;
@@ -35,10 +35,10 @@ public class DisplayHelpHandler : QueryHandler<DisplayHelpRequest, DisplayHelpRe
 		_discordConfig = discordConfig.Value;
 	}
 
-	public override DisplayHelpResponse Execute(DisplayHelpRequest query)
+	public override DisplayHelpResult Execute(DisplayHelpQuery query)
 	{
 		var helpMessage = _helpMessage ??= GenerateHelpMessage(_discordConfig.Prefix);
-		return new DisplayHelpResponse(helpMessage);
+		return new DisplayHelpResult(helpMessage);
 	}
 
 	private static string GenerateHelpMessage(string commandPrefix)

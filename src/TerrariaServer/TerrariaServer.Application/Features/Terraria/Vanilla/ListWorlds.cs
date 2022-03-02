@@ -14,27 +14,27 @@ public class ListWorldsModule : ModuleBase<SocketCommandContext>
 	[Command("list worlds")]
 	internal async Task ListWorldsAsync()
 	{
-		var request = new ListWorldsRequest();
+		var request = new ListWorldsQuery();
 		var response = _queryProcessor.Execute(request);
 		var displayMessage = $"Found the following vanilla worlds:\n\t{string.Join("\n\t", response.Worlds)}";
 		await ReplyAsync(displayMessage);
 	}
 }
 
-public record ListWorldsRequest : IQuery<ListWorldsResponse>;
-public record ListWorldsResponse(List<string> Worlds);
+public record ListWorldsQuery : IQuery<ListWorldsResult>;
+public record ListWorldsResult(List<string> Worlds);
 
-public class ListWorldsHandler : QueryHandler<ListWorldsRequest, ListWorldsResponse>
+public class ListWorldsHandler : QueryHandler<ListWorldsQuery, ListWorldsResult>
 {
 	private readonly VanillaConfiguration _vanillaConfig;
 
 	public ListWorldsHandler(IOptions<VanillaConfiguration> vanillaConfig)
 		=> _vanillaConfig = vanillaConfig.Value;
 
-	public override ListWorldsResponse Execute(ListWorldsRequest query)
+	public override ListWorldsResult Execute(ListWorldsQuery query)
 	{
 		var worlds = ListWorlds();
-		return new ListWorldsResponse(worlds);
+		return new ListWorldsResult(worlds);
 	}
 
 	private List<string> ListWorlds()

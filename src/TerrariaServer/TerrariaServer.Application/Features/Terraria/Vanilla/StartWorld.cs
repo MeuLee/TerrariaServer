@@ -63,10 +63,9 @@ public class StartWorldHandler : RequestHandlerAsync<StartWorldRequest>
 
 	private readonly WorldService _worldService;
 	private readonly VanillaConfiguration _vanillaConfig;
-	private readonly IAmACommandProcessor _commandProcessor;
 
-	public StartWorldHandler(WorldService worldService, IOptions<VanillaConfiguration> vanillaConfig, IAmACommandProcessor commandProcessor)
-		=> (_worldService, _vanillaConfig, _commandProcessor) = (worldService, vanillaConfig.Value, commandProcessor);
+	public StartWorldHandler(WorldService worldService, IOptions<VanillaConfiguration> vanillaConfig)
+		=> (_worldService, _vanillaConfig) = (worldService, vanillaConfig.Value);
 
 	public override async Task<StartWorldRequest> HandleAsync(StartWorldRequest command, CancellationToken cancellationToken)
 	{
@@ -82,8 +81,7 @@ public class StartWorldHandler : RequestHandlerAsync<StartWorldRequest>
 
 		try
 		{
-			var message = new WorldStartedMessage(command.WorldName, command.Password);
-			await _commandProcessor.PublishAsync(message, cancellationToken: cancellationToken);
+			// create the systemd service and start it
 			// wait until the world is started, or StartWorldCalled handler would say that the world started
 		}
 		catch (TimeoutException)
